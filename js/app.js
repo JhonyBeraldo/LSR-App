@@ -5,7 +5,10 @@
 // ------------------------------------------------------------
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
+    // Caminho RELATIVO (sem "/" na frente) — funciona tanto na raiz
+    // do domínio quanto em subpasta (ex: GitHub Pages de projeto,
+    // como https://usuario.github.io/LSR-App/).
+    navigator.serviceWorker.register('sw.js')
       .then((reg) => console.log('[App] Service Worker registrado:', reg.scope))
       .catch((err) => console.error('[App] Falha ao registrar Service Worker:', err));
   });
@@ -193,11 +196,11 @@ function fecharConfirmarDesativar() {
 // Handlers de formulário
 // ------------------------------------------------------------
 /**
- * Impede, em tempo real, que o campo de nome vire um "e-mail colado":
+ * Impede, em tempo real, que o campo de usuário vire um "e-mail colado":
  * corta tudo a partir do primeiro "@" digitado (proteção extra, caso
  * alguém digite por hábito).
  */
-function sanitizarCampoNome(inputEl) {
+function sanitizarCampoUsuario(inputEl) {
   inputEl.addEventListener('input', () => {
     if (inputEl.value.includes('@')) {
       inputEl.value = inputEl.value.split('@')[0];
@@ -208,24 +211,24 @@ function sanitizarCampoNome(inputEl) {
 document.addEventListener('DOMContentLoaded', () => {
   inicializarApp();
 
-  sanitizarCampoNome(document.getElementById('login-email'));
-  sanitizarCampoNome(document.getElementById('cadastro-nome'));
+  sanitizarCampoUsuario(document.getElementById('login-email'));
+  sanitizarCampoUsuario(document.getElementById('cadastro-usuario'));
 
   // Login
   document.getElementById('form-login').addEventListener('submit', async (e) => {
     e.preventDefault();
     esconderErro('erro-login');
-    const nomeCompleto = document.getElementById('login-email').value.trim();
+    const nomeUsuario = document.getElementById('login-email').value.trim();
     const senha = document.getElementById('login-senha').value;
     const btn = document.getElementById('btn-login');
 
     btn.disabled = true;
     btn.textContent = 'Entrando...';
     try {
-      const usuario = await Auth.login(nomeCompleto, senha);
+      const usuario = await Auth.login(nomeUsuario, senha);
       await verificarAcessoEDirecionar(usuario);
     } catch (err) {
-      mostrarErro('erro-login', 'Nome ou senha inválidos.');
+      mostrarErro('erro-login', 'Usuário ou senha inválidos.');
       console.error(err);
     } finally {
       btn.disabled = false;
@@ -237,12 +240,12 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('form-cadastro').addEventListener('submit', async (e) => {
     e.preventDefault();
     esconderErro('erro-cadastro');
-    const nomeCompleto = document.getElementById('cadastro-nome').value.trim();
+    const nomeUsuario = document.getElementById('cadastro-usuario').value.trim();
     const senha = document.getElementById('cadastro-senha').value;
     const btn = document.getElementById('btn-cadastro');
 
-    if (nomeCompleto.length < 3) {
-      mostrarErro('erro-cadastro', 'Digite seu nome completo.');
+    if (nomeUsuario.length < 3) {
+      mostrarErro('erro-cadastro', 'Digite um usuário com no mínimo 3 caracteres.');
       return;
     }
     if (senha.length < 6) {
@@ -253,13 +256,13 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.disabled = true;
     btn.textContent = 'Criando conta...';
     try {
-      await Auth.cadastrar(nomeCompleto, senha);
+      await Auth.cadastrar(nomeUsuario, senha);
       mostrarErro('erro-cadastro', 'Conta criada! Aguarde a aprovação do administrador para poder entrar.');
       document.getElementById('erro-cadastro').style.color = 'var(--lsr-green)';
     } catch (err) {
       const jaExiste = (err.message || '').toLowerCase().includes('already') || (err.message || '').toLowerCase().includes('registered');
       if (jaExiste) {
-        mostrarErro('erro-cadastro', 'Já existe uma conta com esse nome. Adicione o sobrenome completo ou um apelido para diferenciar.');
+        mostrarErro('erro-cadastro', 'Esse usuário já existe. Escolha outro.');
       } else {
         mostrarErro('erro-cadastro', 'Não foi possível criar a conta. ' + (err.message || ''));
       }
