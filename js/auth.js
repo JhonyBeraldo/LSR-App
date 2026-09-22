@@ -13,13 +13,21 @@
 
 const DOMINIO_SINTETICO = 'lsrapp.internal';
 
-function usuarioParaEmailSintetico(nomeUsuario) {
-  const limpo = nomeUsuario.trim().toLowerCase().replace(/[^a-z0-9._-]/g, '');
-  return `${limpo}@${DOMINIO_SINTETICO}`;
-}
-
-function emailSinteticoParaUsuario(email) {
-  return (email || '').split('@')[0];
+/**
+ * Gera o e-mail sintético a partir do NOME COMPLETO digitado.
+ * Ex: "João da Silva" -> "joao.da.silva@lsrapp.internal"
+ * Remove acentos, espaços viram ponto, tudo minúsculo.
+ * Se por hábito a pessoa digitar algo com "@", ignoramos tudo depois dele.
+ */
+function nomeParaEmailSintetico(nomeCompleto) {
+  let base = nomeCompleto.trim().toLowerCase();
+  if (base.includes('@')) {
+    base = base.split('@')[0];
+  }
+  base = base.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); // remove acentos
+  base = base.replace(/\s+/g, '.');
+  base = base.replace(/[^a-z0-9._-]/g, '');
+  return `${base}@${DOMINIO_SINTETICO}`;
 }
 
 const Auth = {
@@ -39,8 +47,8 @@ const Auth = {
     }
   },
 
-  async login(nomeUsuario, senha) {
-    const email = usuarioParaEmailSintetico(nomeUsuario);
+  async login(nomeCompleto, senha) {
+    const email = nomeParaEmailSintetico(nomeCompleto);
     const { data, error } = await supabaseClient.auth.signInWithPassword({
       email,
       password: senha
@@ -49,13 +57,13 @@ const Auth = {
     return data.user;
   },
 
-  async cadastrar(nomeUsuario, senha, nome) {
-    const email = usuarioParaEmailSintetico(nomeUsuario);
+  async cadastrar(nomeCompleto, senha) {
+    const email = nomeParaEmailSintetico(nomeCompleto);
     const { data, error } = await supabaseClient.auth.signUp({
       email,
       password: senha,
       options: {
-        data: { nome, nome_usuario: nomeUsuario.trim().toLowerCase() }
+        data: { nome: nomeCompleto.trim() }
       }
     });
     if (error) throw error;
@@ -82,4 +90,3 @@ const Auth = {
 };
 
 window.Auth = Auth;
-window.emailSinteticoParaUsuario = emailSinteticoParaUsuario;

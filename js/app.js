@@ -73,7 +73,7 @@ async function verificarAcessoEDirecionar(usuario) {
     }
 
     usuarioAtual = usuario;
-    document.getElementById('home-email').textContent = emailSinteticoParaUsuario(usuario.email);
+    document.getElementById('home-email').textContent = perfil.nome || 'Motorista';
     mostrarTela('tela-home');
   } catch (err) {
     console.error('[App] Erro ao verificar perfil:', err);
@@ -192,24 +192,40 @@ function fecharConfirmarDesativar() {
 // ------------------------------------------------------------
 // Handlers de formulário
 // ------------------------------------------------------------
+/**
+ * Impede, em tempo real, que o campo de nome vire um "e-mail colado":
+ * corta tudo a partir do primeiro "@" digitado (proteção extra, caso
+ * alguém digite por hábito).
+ */
+function sanitizarCampoNome(inputEl) {
+  inputEl.addEventListener('input', () => {
+    if (inputEl.value.includes('@')) {
+      inputEl.value = inputEl.value.split('@')[0];
+    }
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   inicializarApp();
+
+  sanitizarCampoNome(document.getElementById('login-email'));
+  sanitizarCampoNome(document.getElementById('cadastro-nome'));
 
   // Login
   document.getElementById('form-login').addEventListener('submit', async (e) => {
     e.preventDefault();
     esconderErro('erro-login');
-    const email = document.getElementById('login-email').value.trim();
+    const nomeCompleto = document.getElementById('login-email').value.trim();
     const senha = document.getElementById('login-senha').value;
     const btn = document.getElementById('btn-login');
 
     btn.disabled = true;
     btn.textContent = 'Entrando...';
     try {
-      const usuario = await Auth.login(email, senha);
+      const usuario = await Auth.login(nomeCompleto, senha);
       await verificarAcessoEDirecionar(usuario);
     } catch (err) {
-      mostrarErro('erro-login', 'Usuário ou senha inválidos.');
+      mostrarErro('erro-login', 'Nome ou senha inválidos.');
       console.error(err);
     } finally {
       btn.disabled = false;
@@ -221,11 +237,14 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('form-cadastro').addEventListener('submit', async (e) => {
     e.preventDefault();
     esconderErro('erro-cadastro');
-    const nome = document.getElementById('cadastro-nome').value.trim();
-    const email = document.getElementById('cadastro-email').value.trim();
+    const nomeCompleto = document.getElementById('cadastro-nome').value.trim();
     const senha = document.getElementById('cadastro-senha').value;
     const btn = document.getElementById('btn-cadastro');
 
+    if (nomeCompleto.length < 3) {
+      mostrarErro('erro-cadastro', 'Digite seu nome completo.');
+      return;
+    }
     if (senha.length < 6) {
       mostrarErro('erro-cadastro', 'A senha precisa ter no mínimo 6 caracteres.');
       return;
@@ -234,11 +253,16 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.disabled = true;
     btn.textContent = 'Criando conta...';
     try {
-      await Auth.cadastrar(email, senha, nome);
+      await Auth.cadastrar(nomeCompleto, senha);
       mostrarErro('erro-cadastro', 'Conta criada! Aguarde a aprovação do administrador para poder entrar.');
       document.getElementById('erro-cadastro').style.color = 'var(--lsr-green)';
     } catch (err) {
-      mostrarErro('erro-cadastro', 'Não foi possível criar a conta. ' + (err.message || ''));
+      const jaExiste = (err.message || '').toLowerCase().includes('already') || (err.message || '').toLowerCase().includes('registered');
+      if (jaExiste) {
+        mostrarErro('erro-cadastro', 'Já existe uma conta com esse nome. Adicione o sobrenome completo ou um apelido para diferenciar.');
+      } else {
+        mostrarErro('erro-cadastro', 'Não foi possível criar a conta. ' + (err.message || ''));
+      }
       console.error(err);
     } finally {
       btn.disabled = false;
