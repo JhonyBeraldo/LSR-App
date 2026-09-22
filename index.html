@@ -115,24 +115,190 @@
     <header class="flex items-center justify-between px-5 py-4">
       <div class="flex items-center gap-2">
         <img src="icons/icon-192.png" alt="LSR" class="w-8 h-8">
-        <span class="font-bold text-white">LSR App</span>
+        <div>
+          <span class="font-bold text-white block leading-tight">LSR App</span>
+          <span id="home-email" class="text-xs leading-tight block" style="color:var(--lsr-text-muted)"></span>
+        </div>
       </div>
       <span id="status-conexao" class="text-xs px-2 py-1 rounded-full"></span>
     </header>
 
-    <main class="flex-1 flex flex-col items-center justify-center px-6 gap-4">
-      <div class="card-lsr w-full max-w-sm p-6 text-center">
-        <p style="color:var(--lsr-text-muted)" class="text-sm mb-1">Logado como</p>
-        <p id="home-email" class="text-white font-semibold mb-4"></p>
-        <p style="color:var(--lsr-text-muted)" class="text-sm">
-          Login, PWA, banco local e veículos prontos ✅<br>
-          Próxima etapa: ciclo de turno.
-        </p>
+    <main class="flex-1 flex flex-col items-center px-6 gap-4 py-4 overflow-y-auto">
+
+      <!-- Preço do combustível atual -->
+      <div class="card-lsr w-full max-w-sm p-4 flex items-center justify-between">
+        <div>
+          <p class="text-xs" style="color:var(--lsr-text-muted)">Combustível atual</p>
+          <p id="preco-combustivel-display" class="text-white font-semibold">R$ --</p>
+        </div>
+        <button id="btn-editar-preco" class="text-sm font-semibold" style="color:var(--lsr-green)">Editar</button>
+      </div>
+
+      <!-- Estado A: sem turno ativo -->
+      <div id="bloco-sem-turno" class="hidden w-full max-w-sm flex flex-col gap-3">
+        <div class="card-lsr p-6 text-center">
+          <p class="text-white font-semibold mb-1">Nenhum turno ativo</p>
+          <p class="text-sm" style="color:var(--lsr-text-muted)">Pronto pra começar a trabalhar?</p>
+        </div>
+        <button id="btn-iniciar-turno" class="btn-lsr btn-lsr-primary w-full">■ INICIAR TURNO</button>
+      </div>
+
+      <!-- Estado B: turno ativo -->
+      <div id="bloco-turno-ativo" class="hidden w-full max-w-sm flex flex-col gap-3">
+        <div class="card-lsr p-6 text-center">
+          <p class="text-xs uppercase tracking-wide mb-1" style="color:var(--lsr-green)">● Turno Ativo</p>
+          <p id="turno-ativo-veiculo" class="text-white font-semibold mb-1"></p>
+          <p id="turno-ativo-info" class="text-sm" style="color:var(--lsr-text-muted)"></p>
+        </div>
+        <button id="btn-encerrar-turno" class="btn-lsr btn-lsr-danger w-full">■ ENCERRAR TURNO</button>
       </div>
 
       <button id="btn-ir-veiculos" class="btn-lsr btn-lsr-outline w-full max-w-sm">🚗 Meus Veículos</button>
       <button id="btn-logout" class="btn-lsr btn-lsr-outline w-full max-w-sm">Sair</button>
     </main>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- MODAL: EDITAR PREÇO DO COMBUSTÍVEL -->
+  <!-- ============================================================ -->
+  <div id="modal-preco-combustivel" class="hidden fixed inset-0 z-50 flex items-center justify-center px-6" style="background-color: rgba(0,0,0,0.6);">
+    <div class="card-lsr w-full sm:max-w-sm p-6">
+      <h2 class="text-lg font-bold text-white mb-4">Preço do combustível</h2>
+      <form id="form-preco-combustivel" class="flex flex-col gap-4">
+        <div>
+          <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">Valor por litro (R$)</label>
+          <input type="number" step="0.01" min="0" id="input-preco-combustivel" required class="input-lsr w-full" placeholder="Ex: 6.19">
+        </div>
+        <p id="erro-preco-combustivel" class="hidden text-sm" style="color:var(--lsr-red)"></p>
+        <div class="flex gap-3">
+          <button type="button" id="btn-cancelar-preco" class="btn-lsr btn-lsr-outline flex-1">Cancelar</button>
+          <button type="submit" class="btn-lsr btn-lsr-primary flex-1">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- MODAL: INICIAR TURNO -->
+  <!-- ============================================================ -->
+  <div id="modal-iniciar-turno" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center" style="background-color: rgba(0,0,0,0.6);">
+    <div class="card-lsr w-full sm:max-w-sm p-6 max-h-[90vh] overflow-y-auto" style="border-radius: 20px 20px 0 0;">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-bold text-white">Iniciar turno</h2>
+        <button id="btn-fechar-modal-iniciar" class="text-2xl leading-none" style="color:var(--lsr-text-muted)">×</button>
+      </div>
+
+      <form id="form-iniciar-turno" class="flex flex-col gap-4">
+        <div>
+          <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">Veículo</label>
+          <select id="select-veiculo-turno" required class="input-lsr w-full"></select>
+        </div>
+
+        <div>
+          <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">KM Inicial</label>
+          <input type="number" step="0.1" min="0" id="input-km-inicial" required class="input-lsr w-full" placeholder="Ex: 45280">
+        </div>
+
+        <p id="aviso-km-inicial" class="hidden text-sm" style="color:#ffb74d"></p>
+        <p id="erro-iniciar-turno" class="hidden text-sm" style="color:var(--lsr-red)"></p>
+
+        <button type="submit" class="btn-lsr btn-lsr-primary w-full mt-2">■ Iniciar</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- MODAL: ENCERRAR TURNO -->
+  <!-- ============================================================ -->
+  <div id="modal-encerrar-turno" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center" style="background-color: rgba(0,0,0,0.6);">
+    <div class="card-lsr w-full sm:max-w-sm p-6 max-h-[90vh] overflow-y-auto" style="border-radius: 20px 20px 0 0;">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-bold text-white">Encerrar turno</h2>
+        <button id="btn-fechar-modal-encerrar" class="text-2xl leading-none" style="color:var(--lsr-text-muted)">×</button>
+      </div>
+
+      <form id="form-encerrar-turno" class="flex flex-col gap-4">
+        <div>
+          <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">KM Final</label>
+          <input type="number" step="0.1" min="0" id="input-km-final" required class="input-lsr w-full">
+        </div>
+
+        <div>
+          <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">Faturamento bruto (R$)</label>
+          <input type="number" step="0.01" min="0" id="input-faturamento" required class="input-lsr w-full" placeholder="Dinheiro líquido recebido">
+        </div>
+
+        <div>
+          <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">Preço do combustível hoje (R$/l)</label>
+          <input type="number" step="0.01" min="0" id="input-preco-combustivel-turno" required class="input-lsr w-full">
+        </div>
+
+        <p id="erro-encerrar-turno" class="hidden text-sm" style="color:var(--lsr-red)"></p>
+
+        <button type="submit" id="btn-ir-confirmar-encerrar" class="btn-lsr btn-lsr-danger w-full mt-2">■ Encerrar turno</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- MODAL: CONFIRMAÇÃO DUPLO-CLIQUE (encerrar turno) -->
+  <!-- ============================================================ -->
+  <div id="modal-confirmar-encerrar" class="hidden fixed inset-0 z-50 flex items-center justify-center px-6" style="background-color: rgba(0,0,0,0.6);">
+    <div class="card-lsr w-full sm:max-w-sm p-6 text-center">
+      <p class="text-white font-semibold mb-2">Confirmar encerramento?</p>
+      <p class="text-sm mb-5" style="color:var(--lsr-text-muted)">Essa ação não pode ser desfeita facilmente. Toque em confirmar novamente.</p>
+      <div class="flex gap-3">
+        <button id="btn-cancelar-confirmar-encerrar" class="btn-lsr btn-lsr-outline flex-1">Cancelar</button>
+        <button id="btn-confirmar-encerrar-final" class="btn-lsr btn-lsr-danger flex-1">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- TELA: RESULTADO DO TURNO -->
+  <!-- ============================================================ -->
+  <div id="tela-resultado-turno" class="tela hidden tela-cheia flex flex-col items-center justify-center px-6">
+    <div class="w-full max-w-sm card-lsr p-6">
+      <p class="text-center text-sm mb-1" style="color:var(--lsr-text-muted)">Lucro líquido do turno</p>
+      <p id="resultado-lucro" class="text-center text-4xl font-bold mb-4">R$ 0,00</p>
+
+      <div class="grid grid-cols-2 gap-3 mb-4">
+        <div class="text-center">
+          <p class="text-xs" style="color:var(--lsr-text-muted)">Lucro / km</p>
+          <p id="resultado-lucro-km" class="font-semibold text-white">R$ 0,00</p>
+        </div>
+        <div class="text-center">
+          <p class="text-xs" style="color:var(--lsr-text-muted)">Lucro / hora</p>
+          <p id="resultado-lucro-hora" class="font-semibold text-white">R$ 0,00</p>
+        </div>
+      </div>
+
+      <div class="text-sm flex flex-col gap-1 mb-5" style="color:var(--lsr-text-muted)">
+        <div class="flex justify-between"><span>Distância</span><span id="resultado-dist" class="text-white"></span></div>
+        <div class="flex justify-between"><span>Faturamento bruto</span><span id="resultado-faturamento" class="text-white"></span></div>
+        <div class="flex justify-between"><span>Combustível</span><span id="resultado-custo-combustivel" class="text-custo"></span></div>
+        <div class="flex justify-between"><span>Manutenção</span><span id="resultado-custo-manutencao" class="text-custo"></span></div>
+        <div class="flex justify-between"><span>Depreciação</span><span id="resultado-custo-depreciacao" class="text-custo"></span></div>
+        <div class="flex justify-between font-semibold"><span>Custo total</span><span id="resultado-custo-total" class="text-custo"></span></div>
+      </div>
+
+      <button id="btn-voltar-resultado" class="btn-lsr btn-lsr-primary w-full">Voltar à home</button>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- MODAL: TURNO ESQUECIDO -->
+  <!-- ============================================================ -->
+  <div id="modal-turno-esquecido" class="hidden fixed inset-0 z-50 flex items-center justify-center px-6" style="background-color: rgba(0,0,0,0.6);">
+    <div class="card-lsr w-full sm:max-w-sm p-6 text-center">
+      <div class="text-4xl mb-3">😴</div>
+      <p class="text-white font-semibold mb-2">Você esqueceu de fechar o turno anterior?</p>
+      <p class="text-sm mb-5" style="color:var(--lsr-text-muted)">Ele foi iniciado há mais de 16 horas.</p>
+      <div class="flex flex-col gap-3">
+        <button id="btn-esquecido-preencher" class="btn-lsr btn-lsr-primary w-full">Preencher dados de fechamento</button>
+        <button id="btn-esquecido-descartar" class="btn-lsr btn-lsr-outline w-full">Descartar turno (cliquei sem querer)</button>
+      </div>
+    </div>
   </div>
 
   <!-- ============================================================ -->
@@ -227,6 +393,7 @@
   <script src="js/db.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/veiculos.js"></script>
+  <script src="js/turnos.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
