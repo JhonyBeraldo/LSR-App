@@ -39,14 +39,14 @@
         <p class="text-sm" style="color:var(--lsr-text-muted)">Lucro Sobre Rodas</p>
       </div>
 
-      <form id="form-login" class="card-lsr p-6 flex flex-col gap-4">
+      <form id="form-login" class="card-lsr p-6 flex flex-col gap-4" autocomplete="off">
         <div>
           <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">E-mail</label>
-          <input type="email" id="login-email" required class="input-lsr w-full" placeholder="seuemail@exemplo.com">
+          <input type="email" id="login-email" name="lsr-login-email-field" required class="input-lsr w-full" placeholder="seuemail@exemplo.com" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
         </div>
         <div>
           <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">Senha</label>
-          <input type="password" id="login-senha" required class="input-lsr w-full" placeholder="••••••••">
+          <input type="password" id="login-senha" name="lsr-login-senha-field" required class="input-lsr w-full" placeholder="••••••••" autocomplete="new-password">
         </div>
 
         <p id="erro-login" class="hidden text-sm" style="color:var(--lsr-red)"></p>
@@ -71,18 +71,18 @@
         <h1 class="text-2xl font-bold text-white">Criar conta</h1>
       </div>
 
-      <form id="form-cadastro" class="card-lsr p-6 flex flex-col gap-4">
+      <form id="form-cadastro" class="card-lsr p-6 flex flex-col gap-4" autocomplete="off">
         <div>
           <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">Nome</label>
-          <input type="text" id="cadastro-nome" required class="input-lsr w-full" placeholder="Seu nome">
+          <input type="text" id="cadastro-nome" name="lsr-cadastro-nome-field" required class="input-lsr w-full" placeholder="Seu nome" autocomplete="off">
         </div>
         <div>
           <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">E-mail</label>
-          <input type="email" id="cadastro-email" required class="input-lsr w-full" placeholder="seuemail@exemplo.com">
+          <input type="email" id="cadastro-email" name="lsr-cadastro-email-field" required class="input-lsr w-full" placeholder="seuemail@exemplo.com" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
         </div>
         <div>
           <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">Senha</label>
-          <input type="password" id="cadastro-senha" required class="input-lsr w-full" placeholder="Mínimo 6 caracteres">
+          <input type="password" id="cadastro-senha" name="lsr-cadastro-senha-field" required class="input-lsr w-full" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
         </div>
 
         <p id="erro-cadastro" class="hidden text-sm" style="color:var(--lsr-red)"></p>
