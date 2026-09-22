@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+  <title>LSR App - Lucro Sobre Rodas</title>
+  <meta name="description" content="Controle seu lucro real por turno de trabalho como motorista de aplicativo.">
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#121212">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="LSR App">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/styles.css">
+
+  <!-- Dexie.js (IndexedDB) -->
+  <script src="https://unpkg.com/dexie@4/dist/dexie.js"></script>
+
+  <!-- Supabase JS -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+</head>
+<body class="tela-cheia" style="background-color:#121212;">
+
+  <!-- ============================================================ -->
+  <!-- TELA: LOGIN -->
+  <!-- ============================================================ -->
+  <div id="tela-login" class="tela hidden tela-cheia flex flex-col items-center justify-center px-6">
+    <div class="w-full max-w-sm">
+      <div class="flex flex-col items-center mb-8">
+        <img src="icons/icon-192.png" alt="LSR App" class="w-20 h-20 mb-3">
+        <h1 class="text-2xl font-bold text-white">LSR App</h1>
+        <p class="text-sm" style="color:var(--lsr-text-muted)">Lucro Sobre Rodas</p>
+      </div>
+
+      <form id="form-login" class="card-lsr p-6 flex flex-col gap-4">
+        <div>
+          <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">E-mail</label>
+          <input type="email" id="login-email" required class="input-lsr w-full" placeholder="seuemail@exemplo.com">
+        </div>
+        <div>
+          <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">Senha</label>
+          <input type="password" id="login-senha" required class="input-lsr w-full" placeholder="••••••••">
+        </div>
+
+        <p id="erro-login" class="hidden text-sm" style="color:var(--lsr-red)"></p>
+
+        <button type="submit" id="btn-login" class="btn-lsr btn-lsr-primary w-full mt-2">Entrar</button>
+
+        <p class="text-center text-sm mt-2" style="color:var(--lsr-text-muted)">
+          Não tem conta?
+          <a href="#" id="link-ir-cadastro" class="font-semibold" style="color:var(--lsr-green)">Cadastre-se</a>
+        </p>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- TELA: CADASTRO -->
+  <!-- ============================================================ -->
+  <div id="tela-cadastro" class="tela hidden tela-cheia flex flex-col items-center justify-center px-6">
+    <div class="w-full max-w-sm">
+      <div class="flex flex-col items-center mb-8">
+        <img src="icons/icon-192.png" alt="LSR App" class="w-20 h-20 mb-3">
+        <h1 class="text-2xl font-bold text-white">Criar conta</h1>
+      </div>
+
+      <form id="form-cadastro" class="card-lsr p-6 flex flex-col gap-4">
+        <div>
+          <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">Nome</label>
+          <input type="text" id="cadastro-nome" required class="input-lsr w-full" placeholder="Seu nome">
+        </div>
+        <div>
+          <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">E-mail</label>
+          <input type="email" id="cadastro-email" required class="input-lsr w-full" placeholder="seuemail@exemplo.com">
+        </div>
+        <div>
+          <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">Senha</label>
+          <input type="password" id="cadastro-senha" required class="input-lsr w-full" placeholder="Mínimo 6 caracteres">
+        </div>
+
+        <p id="erro-cadastro" class="hidden text-sm" style="color:var(--lsr-red)"></p>
+
+        <button type="submit" id="btn-cadastro" class="btn-lsr btn-lsr-primary w-full mt-2">Criar conta</button>
+
+        <p class="text-center text-sm mt-2" style="color:var(--lsr-text-muted)">
+          Já tem conta?
+          <a href="#" id="link-ir-login" class="font-semibold" style="color:var(--lsr-green)">Entrar</a>
+        </p>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- TELA: HOME (placeholder — recebe o ciclo de turno na Etapa 3) -->
+  <!-- ============================================================ -->
+  <div id="tela-home" class="tela hidden tela-cheia flex flex-col">
+    <header class="flex items-center justify-between px-5 py-4">
+      <div class="flex items-center gap-2">
+        <img src="icons/icon-192.png" alt="LSR" class="w-8 h-8">
+        <span class="font-bold text-white">LSR App</span>
+      </div>
+      <span id="status-conexao" class="text-xs px-2 py-1 rounded-full"></span>
+    </header>
+
+    <main class="flex-1 flex flex-col items-center justify-center px-6 gap-4">
+      <div class="card-lsr w-full max-w-sm p-6 text-center">
+        <p style="color:var(--lsr-text-muted)" class="text-sm mb-1">Logado como</p>
+        <p id="home-email" class="text-white font-semibold mb-4"></p>
+        <p style="color:var(--lsr-text-muted)" class="text-sm">
+          Esqueleto do app funcionando ✅<br>
+          Login, PWA e banco local prontos.<br>
+          Próxima etapa: cadastro de veículos.
+        </p>
+      </div>
+
+      <button id="btn-logout" class="btn-lsr btn-lsr-outline w-full max-w-sm">Sair</button>
+    </main>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/supabase-client.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
