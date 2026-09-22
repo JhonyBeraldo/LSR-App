@@ -52,8 +52,37 @@ function esconderErro(elementoId) {
 // Estado local simples
 // ------------------------------------------------------------
 let usuarioAtual = null;
+let perfilAtual = null;
 let veiculoEmEdicaoId = null; // null = criando novo
 let veiculoParaDesativarId = null;
+
+/**
+ * Após login (ou ao reabrir o app com sessão salva), confere se o
+ * perfil já foi aprovado pelo master. Se não, desloga e mostra
+ * a tela de "aguardando aprovação".
+ */
+async function verificarAcessoEDirecionar(usuario) {
+  try {
+    const perfil = await Auth.getPerfil(usuario.id);
+    perfilAtual = perfil;
+
+    if (!perfil.is_ativo) {
+      await Auth.logout();
+      mostrarTela('tela-aguardando-aprovacao');
+      return;
+    }
+
+    usuarioAtual = usuario;
+    document.getElementById('home-email').textContent = emailSinteticoParaUsuario(usuario.email);
+    mostrarTela('tela-home');
+  } catch (err) {
+    console.error('[App] Erro ao verificar perfil:', err);
+    // Sem conexão para checar o perfil: por segurança, não libera acesso.
+    await Auth.logout();
+    mostrarErro('erro-login', 'Não foi possível verificar seu acesso. Tente novamente com conexão à internet.');
+    mostrarTela('tela-login');
+  }
+}
 
 // ------------------------------------------------------------
 // Inicialização: verifica sessão e decide qual tela mostrar
@@ -63,9 +92,7 @@ async function inicializarApp() {
 
   const usuario = await Auth.getUsuarioAtual();
   if (usuario) {
-    usuarioAtual = usuario;
-    document.getElementById('home-email').textContent = emailSinteticoParaUsuario(usuario.email);
-    mostrarTela('tela-home');
+    await verificarAcessoEDirecionar(usuario);
   } else {
     mostrarTela('tela-login');
   }
@@ -180,8 +207,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.textContent = 'Entrando...';
     try {
       const usuario = await Auth.login(email, senha);
-      document.getElementById('home-email').textContent = emailSinteticoParaUsuario(usuario.email);
-      mostrarTela('tela-home');
+      await verificarAcessoEDirecionar(usuario);
     } catch (err) {
       mostrarErro('erro-login', 'Usuário ou senha inválidos.');
       console.error(err);
@@ -209,7 +235,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.textContent = 'Criando conta...';
     try {
       await Auth.cadastrar(email, senha, nome);
-      mostrarErro('erro-cadastro', 'Conta criada! Faça login com seu usuário e senha.');
+      mostrarErro('erro-cadastro', 'Conta criada! Aguarde a aprovação do administrador para poder entrar.');
       document.getElementById('erro-cadastro').style.color = 'var(--lsr-green)';
     } catch (err) {
       mostrarErro('erro-cadastro', 'Não foi possível criar a conta. ' + (err.message || ''));
@@ -233,6 +259,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // Logout
   document.getElementById('btn-logout').addEventListener('click', async () => {
     await Auth.logout();
+    usuarioAtual = null;
+    perfilAtual = null;
+    mostrarTela('tela-login');
+  });
+
+  // Tela de aguardando aprovação -> voltar ao login
+  document.getElementById('btn-voltar-login-aguardando').addEventListener('click', () => {
     mostrarTela('tela-login');
   });
 
