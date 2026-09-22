@@ -1,5 +1,26 @@
 // LSR App - Autenticação
 // Login, cadastro e verificação de sessão via Supabase Auth.
+//
+// O usuário nunca digita um e-mail: apenas um "nome de usuário".
+// Por trás, montamos um e-mail sintético (usuario@DOMINIO_SINTETICO)
+// porque o Supabase Auth exige o formato de e-mail — mesmo padrão
+// usado no Evvo (login simples mapeado para um e-mail real por trás).
+//
+// IMPORTANTE: como esse domínio não recebe e-mails de verdade,
+// é preciso DESATIVAR a confirmação por e-mail no projeto Supabase
+// (Authentication > Providers > Email > "Confirm email" = OFF),
+// senão o cadastro fica preso aguardando confirmação que nunca chega.
+
+const DOMINIO_SINTETICO = 'lsrapp.internal';
+
+function usuarioParaEmailSintetico(nomeUsuario) {
+  const limpo = nomeUsuario.trim().toLowerCase().replace(/[^a-z0-9._-]/g, '');
+  return `${limpo}@${DOMINIO_SINTETICO}`;
+}
+
+function emailSinteticoParaUsuario(email) {
+  return (email || '').split('@')[0];
+}
 
 const Auth = {
   /**
@@ -18,7 +39,8 @@ const Auth = {
     }
   },
 
-  async login(email, senha) {
+  async login(nomeUsuario, senha) {
+    const email = usuarioParaEmailSintetico(nomeUsuario);
     const { data, error } = await supabaseClient.auth.signInWithPassword({
       email,
       password: senha
@@ -27,12 +49,13 @@ const Auth = {
     return data.user;
   },
 
-  async cadastrar(email, senha, nome) {
+  async cadastrar(nomeUsuario, senha, nome) {
+    const email = usuarioParaEmailSintetico(nomeUsuario);
     const { data, error } = await supabaseClient.auth.signUp({
       email,
       password: senha,
       options: {
-        data: { nome }
+        data: { nome, nome_usuario: nomeUsuario.trim().toLowerCase() }
       }
     });
     if (error) throw error;
@@ -59,3 +82,4 @@ const Auth = {
 };
 
 window.Auth = Auth;
+window.emailSinteticoParaUsuario = emailSinteticoParaUsuario;

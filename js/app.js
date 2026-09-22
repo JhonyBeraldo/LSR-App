@@ -64,7 +64,7 @@ async function inicializarApp() {
   const usuario = await Auth.getUsuarioAtual();
   if (usuario) {
     usuarioAtual = usuario;
-    document.getElementById('home-email').textContent = usuario.email;
+    document.getElementById('home-email').textContent = emailSinteticoParaUsuario(usuario.email);
     mostrarTela('tela-home');
   } else {
     mostrarTela('tela-login');
@@ -180,10 +180,10 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.textContent = 'Entrando...';
     try {
       const usuario = await Auth.login(email, senha);
-      document.getElementById('home-email').textContent = usuario.email;
+      document.getElementById('home-email').textContent = emailSinteticoParaUsuario(usuario.email);
       mostrarTela('tela-home');
     } catch (err) {
-      mostrarErro('erro-login', 'E-mail ou senha inválidos.');
+      mostrarErro('erro-login', 'Usuário ou senha inválidos.');
       console.error(err);
     } finally {
       btn.disabled = false;
@@ -209,7 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.textContent = 'Criando conta...';
     try {
       await Auth.cadastrar(email, senha, nome);
-      mostrarErro('erro-cadastro', 'Conta criada! Verifique seu e-mail para confirmar (se exigido) e faça login.');
+      mostrarErro('erro-cadastro', 'Conta criada! Faça login com seu usuário e senha.');
       document.getElementById('erro-cadastro').style.color = 'var(--lsr-green)';
     } catch (err) {
       mostrarErro('erro-cadastro', 'Não foi possível criar a conta. ' + (err.message || ''));
