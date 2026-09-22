@@ -3,7 +3,7 @@
 // IMPORTANTE: sempre que publicar mudanças em arquivos estáticos,
 // incremente CACHE_VERSION para forçar atualização nos celulares.
 
-const CACHE_VERSION = 'lsr-v1';
+const CACHE_VERSION = 'lsr-v2';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -18,7 +18,7 @@ const APP_SHELL = [
   '/icons/apple-touch-icon.png',
   'https://cdn.tailwindcss.com',
   'https://unpkg.com/dexie@4/dist/dexie.js',
-  'https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js'
+  'https://unpkg.com/@supabase/supabase-js@2'
 ];
 
 // Instalação: cacheia o app shell
