@@ -58,6 +58,9 @@ let usuarioAtual = null;
 let perfilAtual = null;
 let veiculoEmEdicaoId = null; // null = criando novo
 let veiculoParaDesativarId = null;
+let turnoAtivoAtual = null;
+let veiculosAtivosCache = [];
+let dadosEncerramentoPendente = null; // guarda os dados enquanto espera o duplo clique de confirmação
 
 /**
  * Após login (ou ao reabrir o app com sessão salva), confere se o
@@ -78,6 +81,7 @@ async function verificarAcessoEDirecionar(usuario) {
     usuarioAtual = usuario;
     document.getElementById('home-email').textContent = perfil.nome || 'Motorista';
     mostrarTela('tela-home');
+    await carregarEstadoHome();
   } catch (err) {
     console.error('[App] Erro ao verificar perfil:', err);
     // Sem conexão para checar o perfil: por segurança, não libera acesso.
@@ -193,6 +197,172 @@ function fecharConfirmarDesativar() {
 }
 
 // ------------------------------------------------------------
+// FORMATAÇÃO
+// ------------------------------------------------------------
+function formatarMoeda(valor) {
+  if (valor === null || valor === undefined || isNaN(valor)) return '—';
+  return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+function formatarHorario(iso) {
+  return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
+// ------------------------------------------------------------
+// HOME: preço de combustível + estado do turno (ativo ou não)
+// ------------------------------------------------------------
+async function carregarEstadoHome() {
+  // Preço de combustível
+  const precoAtual = perfilAtual?.preco_combustivel_atual;
+  document.getElementById('preco-combustivel-display').textContent =
+    precoAtual ? `${formatarMoeda(precoAtual)} / L` : 'Não definido';
+
+  // Turno ativo?
+  turnoAtivoAtual = await Turnos.buscarTurnoAtivo(usuarioAtual.id);
+
+  if (turnoAtivoAtual) {
+    document.getElementById('bloco-sem-turno').classList.add('hidden');
+    document.getElementById('bloco-turno-ativo').classList.remove('hidden');
+
+    const veiculo = await LSR_DB.veiculos.get(turnoAtivoAtual.veiculo_id);
+    document.getElementById('turno-ativo-veiculo').textContent = veiculo
+      ? `${iconeTipoVeiculo(veiculo.tipo)} ${veiculo.nome_modelo}`
+      : 'Veículo';
+    document.getElementById('turno-ativo-info').textContent =
+      `Iniciado às ${formatarHorario(turnoAtivoAtual.tempo_inicio)} · KM inicial ${turnoAtivoAtual.km_inicial}`;
+
+    verificarTurnoEsquecido();
+  } else {
+    document.getElementById('bloco-turno-ativo').classList.add('hidden');
+    document.getElementById('bloco-sem-turno').classList.remove('hidden');
+  }
+}
+
+function verificarTurnoEsquecido() {
+  if (!turnoAtivoAtual) return;
+  const horasDesdeInicio = (Date.now() - new Date(turnoAtivoAtual.tempo_inicio).getTime()) / (1000 * 60 * 60);
+  if (horasDesdeInicio >= 16) {
+    document.getElementById('modal-turno-esquecido').classList.remove('hidden');
+  }
+}
+
+// ------------------------------------------------------------
+// PREÇO DO COMBUSTÍVEL
+// ------------------------------------------------------------
+function abrirModalPreco() {
+  esconderErro('erro-preco-combustivel');
+  document.getElementById('input-preco-combustivel').value = perfilAtual?.preco_combustivel_atual || '';
+  document.getElementById('modal-preco-combustivel').classList.remove('hidden');
+}
+
+function fecharModalPreco() {
+  document.getElementById('modal-preco-combustivel').classList.add('hidden');
+}
+
+// ------------------------------------------------------------
+// INICIAR TURNO
+// ------------------------------------------------------------
+async function abrirModalIniciarTurno() {
+  esconderErro('erro-iniciar-turno');
+  document.getElementById('aviso-km-inicial').classList.add('hidden');
+  document.getElementById('input-km-inicial').value = '';
+
+  veiculosAtivosCache = await Veiculos.listarAtivos(usuarioAtual.id);
+  const select = document.getElementById('select-veiculo-turno');
+  select.innerHTML = '';
+
+  if (!veiculosAtivosCache.length) {
+    select.innerHTML = '<option value="">Nenhum veículo cadastrado</option>';
+  } else {
+    veiculosAtivosCache.forEach((v) => {
+      const opt = document.createElement('option');
+      opt.value = v.id;
+      opt.textContent = `${iconeTipoVeiculo(v.tipo)} ${v.nome_modelo}`;
+      select.appendChild(opt);
+    });
+  }
+
+  document.getElementById('modal-iniciar-turno').classList.remove('hidden');
+}
+
+function fecharModalIniciarTurno() {
+  document.getElementById('modal-iniciar-turno').classList.add('hidden');
+}
+
+// ------------------------------------------------------------
+// ENCERRAR TURNO
+// ------------------------------------------------------------
+function abrirModalEncerrarTurno() {
+  esconderErro('erro-encerrar-turno');
+  document.getElementById('input-km-final').value = '';
+  document.getElementById('input-faturamento').value = '';
+  document.getElementById('input-preco-combustivel-turno').value = perfilAtual?.preco_combustivel_atual || '';
+  document.getElementById('modal-turno-esquecido').classList.add('hidden');
+  document.getElementById('modal-encerrar-turno').classList.remove('hidden');
+}
+
+function fecharModalEncerrarTurno() {
+  document.getElementById('modal-encerrar-turno').classList.add('hidden');
+}
+
+async function processarEncerramentoFinal() {
+  const btn = document.getElementById('btn-confirmar-encerrar-final');
+  btn.disabled = true;
+  btn.textContent = 'Encerrando...';
+
+  try {
+    const turnoFechado = await Turnos.encerrar({
+      turnoId: turnoAtivoAtual.id,
+      kmFinal: dadosEncerramentoPendente.kmFinal,
+      faturamentoBruto: dadosEncerramentoPendente.faturamentoBruto,
+      precoCombustivelTurno: dadosEncerramentoPendente.precoCombustivelTurno
+    });
+
+    const veiculo = await LSR_DB.veiculos.get(turnoFechado.veiculo_id);
+    const resultado = Turnos.calcular({
+      kmInicial: turnoFechado.km_inicial,
+      kmFinal: turnoFechado.km_final,
+      autonomiaKml: veiculo.autonomia_kml,
+      precoCombustivelTurno: turnoFechado.preco_combustivel_turno,
+      taxaManutencaoKm: veiculo.taxa_manutencao_km,
+      taxaDepreciacaoKm: veiculo.taxa_depreciacao_km,
+      faturamentoBruto: turnoFechado.faturamento_bruto,
+      tempoInicioISO: turnoFechado.tempo_inicio,
+      tempoFimISO: turnoFechado.tempo_fim
+    });
+
+    exibirResultadoTurno(resultado);
+
+    document.getElementById('modal-confirmar-encerrar').classList.add('hidden');
+    fecharModalEncerrarTurno();
+    dadosEncerramentoPendente = null;
+    mostrarTela('tela-resultado-turno');
+  } catch (err) {
+    console.error(err);
+    alert('Não foi possível encerrar o turno. Tente novamente.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Confirmar';
+  }
+}
+
+function exibirResultadoTurno(r) {
+  const lucroPositivo = r.lucro >= 0;
+  const corLucro = lucroPositivo ? 'var(--lsr-green)' : 'var(--lsr-red)';
+
+  document.getElementById('resultado-lucro').textContent = formatarMoeda(r.lucro);
+  document.getElementById('resultado-lucro').style.color = corLucro;
+  document.getElementById('resultado-lucro-km').textContent = r.lucroPorKm !== null ? formatarMoeda(r.lucroPorKm) : '—';
+  document.getElementById('resultado-lucro-hora').textContent = r.lucroPorHora !== null ? formatarMoeda(r.lucroPorHora) : '—';
+  document.getElementById('resultado-dist').textContent = `${r.dist.toFixed(1)} km`;
+  document.getElementById('resultado-faturamento').textContent = formatarMoeda(r.dist >= 0 ? (r.lucro + r.custoTotal) : null);
+  document.getElementById('resultado-custo-combustivel').textContent = formatarMoeda(r.custoCombustivel);
+  document.getElementById('resultado-custo-manutencao').textContent = formatarMoeda(r.custoManutencao);
+  document.getElementById('resultado-custo-depreciacao').textContent = formatarMoeda(r.custoDepreciacao);
+  document.getElementById('resultado-custo-total').textContent = formatarMoeda(r.custoTotal);
+}
+
+// ------------------------------------------------------------
 // Handlers de formulário
 // ------------------------------------------------------------
 /**
@@ -288,6 +458,7 @@ document.addEventListener('DOMContentLoaded', () => {
     await Auth.logout();
     usuarioAtual = null;
     perfilAtual = null;
+    turnoAtivoAtual = null;
     mostrarTela('tela-login');
   });
 
@@ -367,6 +538,144 @@ document.addEventListener('DOMContentLoaded', () => {
     } finally {
       btn.disabled = false;
       btn.textContent = 'Desativar';
+    }
+  });
+
+  // ------------------------------------------------------------
+  // Preço do combustível
+  // ------------------------------------------------------------
+  document.getElementById('btn-editar-preco').addEventListener('click', abrirModalPreco);
+  document.getElementById('btn-cancelar-preco').addEventListener('click', fecharModalPreco);
+
+  document.getElementById('form-preco-combustivel').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    esconderErro('erro-preco-combustivel');
+    const preco = parseFloat(document.getElementById('input-preco-combustivel').value);
+
+    if (!preco || preco <= 0) {
+      mostrarErro('erro-preco-combustivel', 'Digite um valor maior que zero.');
+      return;
+    }
+
+    try {
+      perfilAtual = await Auth.atualizarPrecoCombustivel(usuarioAtual.id, preco);
+      fecharModalPreco();
+      await carregarEstadoHome();
+    } catch (err) {
+      mostrarErro('erro-preco-combustivel', 'Não foi possível salvar. Verifique sua conexão.');
+      console.error(err);
+    }
+  });
+
+  // ------------------------------------------------------------
+  // Iniciar turno
+  // ------------------------------------------------------------
+  document.getElementById('btn-iniciar-turno').addEventListener('click', abrirModalIniciarTurno);
+  document.getElementById('btn-fechar-modal-iniciar').addEventListener('click', fecharModalIniciarTurno);
+
+  document.getElementById('form-iniciar-turno').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    esconderErro('erro-iniciar-turno');
+
+    const veiculoId = document.getElementById('select-veiculo-turno').value;
+    const kmInicial = parseFloat(document.getElementById('input-km-inicial').value);
+
+    if (!veiculoId) {
+      mostrarErro('erro-iniciar-turno', 'Cadastre um veículo antes de iniciar um turno.');
+      return;
+    }
+    if (isNaN(kmInicial) || kmInicial < 0) {
+      mostrarErro('erro-iniciar-turno', 'Digite um KM inicial válido.');
+      return;
+    }
+
+    // Alerta (não bloqueio) comparando com o último turno fechado desse veículo
+    const ultimoTurno = await Turnos.buscarUltimoTurnoFechado(usuarioAtual.id, veiculoId);
+    if (ultimoTurno && kmInicial > ultimoTurno.km_final) {
+      const confirmar = confirm(
+        `Seu KM inicial (${kmInicial}) é maior que o último registrado (${ultimoTurno.km_final}). Confirmar início?`
+      );
+      if (!confirmar) return;
+    } else if (ultimoTurno && kmInicial < ultimoTurno.km_final) {
+      const confirmar = confirm(
+        `Seu KM inicial (${kmInicial}) é MENOR que o último registrado (${ultimoTurno.km_final}). Confirmar início?`
+      );
+      if (!confirmar) return;
+    }
+
+    const btn = e.target.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.textContent = 'Iniciando...';
+
+    try {
+      await Turnos.iniciar({ userId: usuarioAtual.id, veiculoId, kmInicial });
+      fecharModalIniciarTurno();
+      await carregarEstadoHome();
+    } catch (err) {
+      mostrarErro('erro-iniciar-turno', 'Não foi possível iniciar o turno.');
+      console.error(err);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '■ Iniciar';
+    }
+  });
+
+  // ------------------------------------------------------------
+  // Encerrar turno
+  // ------------------------------------------------------------
+  document.getElementById('btn-encerrar-turno').addEventListener('click', abrirModalEncerrarTurno);
+  document.getElementById('btn-fechar-modal-encerrar').addEventListener('click', fecharModalEncerrarTurno);
+
+  document.getElementById('form-encerrar-turno').addEventListener('submit', (e) => {
+    e.preventDefault();
+    esconderErro('erro-encerrar-turno');
+
+    const kmFinal = parseFloat(document.getElementById('input-km-final').value);
+    const faturamentoBruto = parseFloat(document.getElementById('input-faturamento').value);
+    const precoCombustivelTurno = parseFloat(document.getElementById('input-preco-combustivel-turno').value);
+
+    if (isNaN(kmFinal) || kmFinal < turnoAtivoAtual.km_inicial) {
+      mostrarErro('erro-encerrar-turno', `O KM final não pode ser menor que o KM inicial (${turnoAtivoAtual.km_inicial}).`);
+      return;
+    }
+    if (isNaN(faturamentoBruto) || faturamentoBruto < 0) {
+      mostrarErro('erro-encerrar-turno', 'Digite um faturamento válido.');
+      return;
+    }
+    if (isNaN(precoCombustivelTurno) || precoCombustivelTurno < 0) {
+      mostrarErro('erro-encerrar-turno', 'Digite um preço de combustível válido.');
+      return;
+    }
+
+    // Guarda os dados e pede confirmação de duplo clique antes de computar
+    dadosEncerramentoPendente = { kmFinal, faturamentoBruto, precoCombustivelTurno };
+    document.getElementById('modal-confirmar-encerrar').classList.remove('hidden');
+  });
+
+  document.getElementById('btn-cancelar-confirmar-encerrar').addEventListener('click', () => {
+    document.getElementById('modal-confirmar-encerrar').classList.add('hidden');
+    dadosEncerramentoPendente = null;
+  });
+  document.getElementById('btn-confirmar-encerrar-final').addEventListener('click', processarEncerramentoFinal);
+
+  document.getElementById('btn-voltar-resultado').addEventListener('click', () => {
+    mostrarTela('tela-home');
+  });
+
+  // ------------------------------------------------------------
+  // Turno esquecido
+  // ------------------------------------------------------------
+  document.getElementById('btn-esquecido-preencher').addEventListener('click', () => {
+    abrirModalEncerrarTurno();
+  });
+  document.getElementById('btn-esquecido-descartar').addEventListener('click', async () => {
+    try {
+      await Turnos.descartar(turnoAtivoAtual.id);
+      document.getElementById('modal-turno-esquecido').classList.add('hidden');
+      await carregarEstadoHome();
+    } catch (err) {
+      console.error(err);
+      alert('Não foi possível descartar o turno.');
     }
   });
 });

@@ -84,6 +84,21 @@ const Auth = {
       .single();
     if (error) throw error;
     return data;
+  },
+
+  /**
+   * Atualiza o preço de combustível atual do motorista (usado como
+   * valor padrão sugerido ao encerrar um turno — mas é editável na hora).
+   */
+  async atualizarPrecoCombustivel(userId, preco) {
+    const { data, error } = await supabaseClient
+      .from('perfis')
+      .update({ preco_combustivel_atual: preco })
+      .eq('id', userId)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
   }
 };
 
