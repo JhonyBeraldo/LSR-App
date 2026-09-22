@@ -3,19 +3,22 @@
 // IMPORTANTE: sempre que publicar mudanças em arquivos estáticos,
 // incremente CACHE_VERSION para forçar atualização nos celulares.
 
-const CACHE_VERSION = 'lsr-v2';
+const CACHE_VERSION = 'lsr-v3';
+// Caminhos RELATIVOS (sem "/" na frente) — essencial para funcionar
+// em subpasta (ex: GitHub Pages de projeto: usuario.github.io/LSR-App/).
 const APP_SHELL = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/css/styles.css',
-  '/js/app.js',
-  '/js/db.js',
-  '/js/auth.js',
-  '/js/supabase-client.js',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
-  '/icons/apple-touch-icon.png',
+  './',
+  'index.html',
+  'manifest.json',
+  'css/styles.css',
+  'js/app.js',
+  'js/db.js',
+  'js/auth.js',
+  'js/supabase-client.js',
+  'js/veiculos.js',
+  'icons/icon-192.png',
+  'icons/icon-512.png',
+  'icons/apple-touch-icon.png',
   'https://cdn.tailwindcss.com',
   'https://unpkg.com/dexie@4/dist/dexie.js',
   'https://unpkg.com/@supabase/supabase-js@2'
@@ -80,7 +83,7 @@ self.addEventListener('fetch', (event) => {
     }).catch(() => {
       // Fallback offline para navegação
       if (event.request.mode === 'navigate') {
-        return caches.match('/index.html');
+        return caches.match('index.html');
       }
     })
   );

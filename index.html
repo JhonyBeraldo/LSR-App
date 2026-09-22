@@ -9,6 +9,7 @@
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#121212">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="LSR App">
@@ -41,8 +42,8 @@
 
       <form id="form-login" class="card-lsr p-6 flex flex-col gap-4" autocomplete="off">
         <div>
-          <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">Nome completo</label>
-          <input type="text" id="login-email" name="lsr-login-nome-field" required class="input-lsr w-full" placeholder="Digite seu nome completo" autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false">
+          <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">Usuário</label>
+          <input type="text" id="login-email" name="lsr-login-usuario-field" required class="input-lsr w-full" placeholder="usuario" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
         </div>
         <div>
           <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">Senha</label>
@@ -73,9 +74,8 @@
 
       <form id="form-cadastro" class="card-lsr p-6 flex flex-col gap-4" autocomplete="off">
         <div>
-          <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">Nome completo</label>
-          <input type="text" id="cadastro-nome" name="lsr-cadastro-nome-field" required minlength="3" class="input-lsr w-full" placeholder="Digite seu nome completo" autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false">
-          <p class="text-xs mt-1" style="color:var(--lsr-text-muted)">Esse nome também será usado para você entrar no app.</p>
+          <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">Usuário</label>
+          <input type="text" id="cadastro-usuario" name="lsr-cadastro-usuario-field" required minlength="3" class="input-lsr w-full" placeholder="usuario" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
         </div>
         <div>
           <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">Senha</label>
