@@ -41,8 +41,8 @@
 
       <form id="form-login" class="card-lsr p-6 flex flex-col gap-4" autocomplete="off">
         <div>
-          <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">Usuário</label>
-          <input type="text" id="login-email" name="lsr-login-usuario-field" required class="input-lsr w-full" placeholder="seu.usuario" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+          <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">Nome completo</label>
+          <input type="text" id="login-email" name="lsr-login-nome-field" required class="input-lsr w-full" placeholder="Digite seu nome completo" autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false">
         </div>
         <div>
           <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">Senha</label>
@@ -73,12 +73,9 @@
 
       <form id="form-cadastro" class="card-lsr p-6 flex flex-col gap-4" autocomplete="off">
         <div>
-          <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">Nome</label>
-          <input type="text" id="cadastro-nome" name="lsr-cadastro-nome-field" required class="input-lsr w-full" placeholder="Seu nome" autocomplete="off">
-        </div>
-        <div>
-          <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">Usuário</label>
-          <input type="text" id="cadastro-email" name="lsr-cadastro-usuario-field" required class="input-lsr w-full" placeholder="seu.usuario" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" pattern="[a-zA-Z0-9._-]{3,30}" title="Apenas letras, números, ponto, hífen e underscore (mínimo 3 caracteres)">
+          <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">Nome completo</label>
+          <input type="text" id="cadastro-nome" name="lsr-cadastro-nome-field" required minlength="3" class="input-lsr w-full" placeholder="Digite seu nome completo" autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false">
+          <p class="text-xs mt-1" style="color:var(--lsr-text-muted)">Esse nome também será usado para você entrar no app.</p>
         </div>
         <div>
           <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">Senha</label>
