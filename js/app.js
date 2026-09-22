@@ -333,6 +333,19 @@ async function processarEncerramentoFinal() {
 
     exibirResultadoTurno(resultado);
 
+    // Se o preço digitado ao encerrar for diferente do padrão salvo no perfil,
+    // atualiza o padrão — assim, da próxima vez (depois de abastecer com preço
+    // novo), o valor sugerido já vem correto. O snapshot histórico deste turno
+    // (preco_combustivel_turno) já foi salvo congelado e não é afetado por isso.
+    const precoDigitado = dadosEncerramentoPendente.precoCombustivelTurno;
+    if (precoDigitado !== perfilAtual?.preco_combustivel_atual) {
+      try {
+        perfilAtual = await Auth.atualizarPrecoCombustivel(usuarioAtual.id, precoDigitado);
+      } catch (err) {
+        console.warn('[App] Não foi possível atualizar o preço padrão do combustível:', err);
+      }
+    }
+
     document.getElementById('modal-confirmar-encerrar').classList.add('hidden');
     fecharModalEncerrarTurno();
     dadosEncerramentoPendente = null;
@@ -658,8 +671,9 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.getElementById('btn-confirmar-encerrar-final').addEventListener('click', processarEncerramentoFinal);
 
-  document.getElementById('btn-voltar-resultado').addEventListener('click', () => {
+  document.getElementById('btn-voltar-resultado').addEventListener('click', async () => {
     mostrarTela('tela-home');
+    await carregarEstadoHome();
   });
 
   // ------------------------------------------------------------
