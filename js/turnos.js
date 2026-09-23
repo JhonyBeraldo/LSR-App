@@ -45,32 +45,101 @@ const Turnos = {
   },
 
   // ------------------------------------------------------------
-  // CONSULTAS LOCAIS (Dexie)
+  // CONSULTAS: REMOTO PRIMEIRO (Supabase), Dexie como cache/fallback offline.
+  // Isso garante que o histórico apareça igual em qualquer aparelho —
+  // inclusive um app recém-instalado, cujo banco local nasce vazio.
   // ------------------------------------------------------------
   async buscarTurnoAtivo(userId) {
-    const turnos = await LSR_DB.turnos
+    try {
+      const { data, error } = await supabaseClient
+        .from('turnos')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('status', 'ativo')
+        .limit(1);
+      if (error) throw error;
+
+      if (data && data.length) {
+        const turno = { ...data[0], _synced: true };
+        await LSR_DB.turnos.put(turno);
+        return turno;
+      }
+    } catch (err) {
+      console.warn('[Turnos] Sem conexão pra checar turno ativo remoto, usando cache local:', err);
+    }
+
+    // Fallback: cobre modo offline e turnos criados offline ainda não sincronizados
+    const locais = await LSR_DB.turnos
       .where('user_id').equals(userId)
       .and((t) => t.status === 'ativo')
       .toArray();
-    return turnos[0] || null;
+    return locais[0] || null;
   },
 
   async buscarUltimoTurnoFechado(userId, veiculoId) {
-    const turnos = await LSR_DB.turnos
+    try {
+      const { data, error } = await supabaseClient
+        .from('turnos')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('veiculo_id', veiculoId)
+        .eq('status', 'fechado')
+        .order('tempo_fim', { ascending: false })
+        .limit(1);
+      if (error) throw error;
+
+      if (data && data.length) {
+        await LSR_DB.turnos.put({ ...data[0], _synced: true });
+        return data[0];
+      }
+      return null;
+    } catch (err) {
+      console.warn('[Turnos] Sem conexão pra checar último turno remoto, usando cache local:', err);
+    }
+
+    const locais = await LSR_DB.turnos
       .where('user_id').equals(userId)
       .and((t) => t.veiculo_id === veiculoId && t.status === 'fechado')
       .toArray();
-    turnos.sort((a, b) => new Date(b.tempo_fim) - new Date(a.tempo_fim));
-    return turnos[0] || null;
+    locais.sort((a, b) => new Date(b.tempo_fim) - new Date(a.tempo_fim));
+    return locais[0] || null;
   },
 
   async listarHistorico(userId, limite = 30) {
-    const turnos = await LSR_DB.turnos
-      .where('user_id').equals(userId)
-      .and((t) => t.status !== 'ativo')
-      .toArray();
-    turnos.sort((a, b) => new Date(b.data_turno) - new Date(a.data_turno));
-    return turnos.slice(0, limite);
+    try {
+      const { data, error } = await supabaseClient
+        .from('turnos')
+        .select('*')
+        .eq('user_id', userId)
+        .neq('status', 'ativo')
+        .order('data_turno', { ascending: false })
+        .limit(limite);
+      if (error) throw error;
+
+      const remotos = (data || []).map((t) => ({ ...t, _synced: true }));
+      if (remotos.length) {
+        await LSR_DB.turnos.bulkPut(remotos);
+      }
+
+      // Inclui turnos criados/editados offline que ainda não chegaram no servidor
+      const idsRemotos = new Set(remotos.map((t) => t.id));
+      const pendentesLocais = await LSR_DB.turnos
+        .where('user_id').equals(userId)
+        .and((t) => t.status !== 'ativo' && t._synced === false && !idsRemotos.has(t.id))
+        .toArray();
+
+      const combinado = [...remotos, ...pendentesLocais];
+      combinado.sort((a, b) => new Date(b.data_turno) - new Date(a.data_turno));
+      return combinado.slice(0, limite);
+    } catch (err) {
+      console.warn('[Turnos] Sem conexão, usando histórico em cache local:', err);
+      const turnos = await LSR_DB.turnos
+        .where('user_id').equals(userId)
+        .and((t) => t.status !== 'ativo')
+        .toArray();
+      turnos.sort((a, b) => new Date(b.data_turno) - new Date(a.data_turno));
+      return turnos.slice(0, limite);
+    }
   },
 
   // ------------------------------------------------------------
