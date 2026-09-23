@@ -153,9 +153,85 @@
         <button id="btn-encerrar-turno" class="btn-lsr btn-lsr-danger w-full">■ ENCERRAR TURNO</button>
       </div>
 
+      <button id="btn-ir-historico" class="btn-lsr btn-lsr-outline w-full max-w-sm">📋 Histórico</button>
       <button id="btn-ir-veiculos" class="btn-lsr btn-lsr-outline w-full max-w-sm">🚗 Meus Veículos</button>
       <button id="btn-logout" class="btn-lsr btn-lsr-outline w-full max-w-sm">Sair</button>
     </main>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- TELA: HISTÓRICO -->
+  <!-- ============================================================ -->
+  <div id="tela-historico" class="tela hidden tela-cheia flex flex-col">
+    <header class="flex items-center gap-3 px-5 py-4">
+      <button id="btn-voltar-home-historico" class="text-2xl leading-none" style="color:var(--lsr-text-muted)">←</button>
+      <span class="font-bold text-white text-lg">Histórico</span>
+    </header>
+
+    <main class="flex-1 px-5 pb-6 overflow-y-auto">
+      <!-- Resumo semana / mês -->
+      <div class="grid grid-cols-2 gap-3 mb-4">
+        <div class="card-lsr p-4 text-center">
+          <p class="text-xs mb-1" style="color:var(--lsr-text-muted)">Últimos 7 dias</p>
+          <p id="resumo-semana-lucro" class="font-bold text-lg">R$ 0,00</p>
+          <p id="resumo-semana-turnos" class="text-xs" style="color:var(--lsr-text-muted)">0 turno(s)</p>
+        </div>
+        <div class="card-lsr p-4 text-center">
+          <p class="text-xs mb-1" style="color:var(--lsr-text-muted)">Este mês</p>
+          <p id="resumo-mes-lucro" class="font-bold text-lg">R$ 0,00</p>
+          <p id="resumo-mes-turnos" class="text-xs" style="color:var(--lsr-text-muted)">0 turno(s)</p>
+        </div>
+      </div>
+
+      <div id="lista-historico" class="flex flex-col gap-3"></div>
+
+      <p id="historico-vazio" class="hidden text-center text-sm py-8" style="color:var(--lsr-text-muted)">
+        Nenhum turno no histórico ainda.
+      </p>
+    </main>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- MODAL: EDITAR TURNO (retroativo) -->
+  <!-- ============================================================ -->
+  <div id="modal-editar-turno" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center" style="background-color: rgba(0,0,0,0.6);">
+    <div class="card-lsr w-full sm:max-w-sm p-6 max-h-[90vh] overflow-y-auto" style="border-radius: 20px 20px 0 0;">
+      <div class="flex items-center justify-between mb-1">
+        <h2 class="text-lg font-bold text-white">Editar turno</h2>
+        <button id="btn-fechar-modal-editar" class="text-2xl leading-none" style="color:var(--lsr-text-muted)">×</button>
+      </div>
+      <p class="text-sm mb-4" style="color:var(--lsr-text-muted)">
+        <span id="editar-turno-veiculo-nome"></span> · <span id="editar-turno-data"></span>
+      </p>
+
+      <form id="form-editar-turno" class="flex flex-col gap-4">
+        <input type="hidden" id="editar-turno-id">
+
+        <div>
+          <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">KM Inicial</label>
+          <input type="number" step="0.1" min="0" id="input-editar-km-inicial" required class="input-lsr w-full">
+        </div>
+
+        <div>
+          <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">KM Final</label>
+          <input type="number" step="0.1" min="0" id="input-editar-km-final" required class="input-lsr w-full">
+        </div>
+
+        <div>
+          <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">Faturamento bruto (R$)</label>
+          <input type="number" step="0.01" min="0" id="input-editar-faturamento" required class="input-lsr w-full">
+        </div>
+
+        <div>
+          <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">Preço do combustível daquele dia (R$/l)</label>
+          <input type="number" step="0.01" min="0" id="input-editar-preco-combustivel" required class="input-lsr w-full">
+        </div>
+
+        <p id="erro-editar-turno" class="hidden text-sm" style="color:var(--lsr-red)"></p>
+
+        <button type="submit" class="btn-lsr btn-lsr-primary w-full mt-2">Salvar e recalcular</button>
+      </form>
+    </div>
   </div>
 
   <!-- ============================================================ -->
