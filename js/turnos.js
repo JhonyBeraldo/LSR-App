@@ -60,7 +60,17 @@ const Turnos = {
       if (error) throw error;
 
       if (data && data.length) {
-        const turno = { ...data[0], _synced: true };
+        const remoto = data[0];
+        const local = await LSR_DB.turnos.get(remoto.id);
+
+        // PROTEÇÃO: se existe uma mudança local ainda não sincronizada
+        // pra esse turno (ex: foi fechado offline e o servidor ainda não
+        // sabe disso), NUNCA sobrescreve o local com o remoto desatualizado.
+        if (local && local._synced === false) {
+          return local.status === 'ativo' ? local : null;
+        }
+
+        const turno = { ...remoto, _synced: true };
         await LSR_DB.turnos.put(turno);
         return turno;
       }
@@ -89,8 +99,15 @@ const Turnos = {
       if (error) throw error;
 
       if (data && data.length) {
-        await LSR_DB.turnos.put({ ...data[0], _synced: true });
-        return data[0];
+        const remoto = data[0];
+        const local = await LSR_DB.turnos.get(remoto.id);
+
+        if (local && local._synced === false) {
+          return local;
+        }
+
+        await LSR_DB.turnos.put({ ...remoto, _synced: true });
+        return remoto;
       }
       return null;
     } catch (err) {
@@ -117,18 +134,31 @@ const Turnos = {
       if (error) throw error;
 
       const remotos = (data || []).map((t) => ({ ...t, _synced: true }));
-      if (remotos.length) {
-        await LSR_DB.turnos.bulkPut(remotos);
+
+      // Mapa de tudo que está pendente LOCALMENTE (criado/editado offline
+      // e ainda não confirmado pelo servidor) — nunca deixa isso ser
+      // sobrescrito por uma leitura remota desatualizada.
+      const todosPendentesLocais = await LSR_DB.turnos
+        .where('user_id').equals(userId)
+        .and((t) => t.status !== 'ativo' && t._synced === false)
+        .toArray();
+      const pendentesPorId = {};
+      todosPendentesLocais.forEach((t) => { pendentesPorId[t.id] = t; });
+
+      // Só grava no cache local os remotos que NÃO têm pendência local
+      const paraGravarNoCache = remotos.filter((r) => !pendentesPorId[r.id]);
+      if (paraGravarNoCache.length) {
+        await LSR_DB.turnos.bulkPut(paraGravarNoCache);
       }
 
-      // Inclui turnos criados/editados offline que ainda não chegaram no servidor
-      const idsRemotos = new Set(remotos.map((t) => t.id));
-      const pendentesLocais = await LSR_DB.turnos
-        .where('user_id').equals(userId)
-        .and((t) => t.status !== 'ativo' && t._synced === false && !idsRemotos.has(t.id))
-        .toArray();
+      // Monta a lista final: pra cada id, prefere a versão local pendente
+      // (mais recente) sobre a remota; inclui pendentes que o servidor
+      // ainda nem conhece
+      const porId = {};
+      remotos.forEach((r) => { porId[r.id] = pendentesPorId[r.id] || r; });
+      todosPendentesLocais.forEach((l) => { if (!porId[l.id]) porId[l.id] = l; });
 
-      const combinado = [...remotos, ...pendentesLocais];
+      const combinado = Object.values(porId);
       combinado.sort((a, b) => new Date(b.data_turno) - new Date(a.data_turno));
       return combinado.slice(0, limite);
     } catch (err) {
