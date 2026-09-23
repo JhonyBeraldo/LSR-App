@@ -210,6 +210,18 @@ function formatarHorario(iso) {
   return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
+/**
+ * Formata horas decimais em algo legível: "6h30" ou "3h" (sem minutos
+ * quando for redondo).
+ */
+function formatarDuracao(horasDecimais) {
+  if (horasDecimais === null || horasDecimais === undefined || isNaN(horasDecimais)) return '';
+  const totalMin = Math.round(horasDecimais * 60);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  return m > 0 ? `${h}h${String(m).padStart(2, '0')}` : `${h}h`;
+}
+
 function formatarDataBR(dataISO) {
   // dataISO no formato "AAAA-MM-DD"
   const [ano, mes, dia] = dataISO.split('-');
@@ -516,6 +528,7 @@ function exibirResultadoTurno(r) {
   document.getElementById('resultado-lucro').style.color = corLucro;
   document.getElementById('resultado-lucro-km').textContent = r.lucroPorKm !== null ? formatarMoeda(r.lucroPorKm) : '—';
   document.getElementById('resultado-lucro-hora').textContent = r.lucroPorHora !== null ? formatarMoeda(r.lucroPorHora) : '—';
+  document.getElementById('resultado-duracao-turno').textContent = r.tempoTotalHoras !== null ? `(${formatarDuracao(r.tempoTotalHoras)})` : '';
   document.getElementById('resultado-dist').textContent = `${r.dist.toFixed(1)} km`;
   document.getElementById('resultado-faturamento').textContent = formatarMoeda(r.dist >= 0 ? (r.lucro + r.custoTotal) : null);
   document.getElementById('resultado-custo-combustivel').textContent = formatarMoeda(r.custoCombustivel);
