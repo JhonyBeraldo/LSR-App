@@ -21,13 +21,18 @@ async function atualizarStatusConexao() {
   const badge = document.getElementById('status-conexao');
   if (!badge) return;
 
+  const pendentes = await Sync.contarPendentes();
+
   if (!navigator.onLine) {
-    badge.textContent = '○ Offline';
+    if (pendentes > 0) {
+      badge.textContent = `○ Offline · ⏳ ${pendentes} pendente${pendentes > 1 ? 's' : ''}`;
+    } else {
+      badge.textContent = '○ Offline';
+    }
     badge.style.color = 'var(--lsr-text-muted)';
     return;
   }
 
-  const pendentes = await Sync.contarPendentes();
   if (pendentes > 0) {
     badge.textContent = `⏳ ${pendentes} pendente${pendentes > 1 ? 's' : ''}`;
     badge.style.color = '#ffb74d';
@@ -486,6 +491,7 @@ async function processarEncerramentoFinal() {
     document.getElementById('modal-confirmar-encerrar').classList.add('hidden');
     fecharModalEncerrarTurno();
     dadosEncerramentoPendente = null;
+    await atualizarStatusConexao();
 
     origemTelaResultado = 'fechamento';
     turnoDetalheAtual = null;
@@ -638,8 +644,6 @@ function exibirResultadoTurno(r) {
   document.getElementById('resultado-lucro').textContent = formatarMoeda(r.lucro);
   document.getElementById('resultado-lucro').style.color = corLucro;
   document.getElementById('resultado-lucro-km').textContent = r.lucroPorKm !== null ? formatarMoeda(r.lucroPorKm) : '—';
-  document.getElementById('resultado-lucro-hora').textContent = r.lucroPorHora !== null ? formatarMoeda(r.lucroPorHora) : '—';
-  document.getElementById('resultado-duracao-turno').textContent = r.tempoTotalHoras !== null ? `(${formatarDuracao(r.tempoTotalHoras)})` : '';
   document.getElementById('resultado-dist').textContent = `${r.dist.toFixed(1)} km`;
   document.getElementById('resultado-faturamento').textContent = formatarMoeda(r.dist >= 0 ? (r.lucro + r.custoTotal) : null);
   document.getElementById('resultado-custo-combustivel').textContent = formatarMoeda(r.custoCombustivel);
