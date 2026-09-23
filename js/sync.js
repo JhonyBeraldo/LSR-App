@@ -71,9 +71,19 @@ const Sync = {
 
     if (localMaisNovo) {
       // Local vence (Last-Write-Wins): empurra os dados locais
-      const { _synced, ...payload } = local;
-      const { error } = await supabaseClient.from('turnos').update(payload).eq('id', turnoId);
+      const { _synced, id, ...payload } = local;
+      const { data, error } = await supabaseClient
+        .from('turnos')
+        .update(payload)
+        .eq('id', turnoId)
+        .select();
       if (error) throw error;
+      // UPDATE que bate 0 linhas (ex: bloqueado pelo RLS) NÃO gera erro
+      // sozinho — precisa checar manualmente pra não marcar como sincronizado
+      // algo que na verdade nunca chegou no servidor.
+      if (!data || data.length === 0) {
+        throw new Error('Nenhuma linha atualizada no servidor ao sincronizar (possível bloqueio de permissão).');
+      }
       await LSR_DB.turnos.update(turnoId, { _synced: true });
     } else {
       // Servidor vence: adota a versão remota (pode ter sido editada

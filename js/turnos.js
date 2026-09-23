@@ -217,7 +217,7 @@ const Turnos = {
     const turnoAtualizado = await LSR_DB.turnos.get(turnoId);
 
     try {
-      const { error } = await supabaseClient
+      const { data, error } = await supabaseClient
         .from('turnos')
         .update({
           km_final: kmFinal,
@@ -226,8 +226,14 @@ const Turnos = {
           tempo_fim: agora,
           status: 'fechado'
         })
-        .eq('id', turnoId);
+        .eq('id', turnoId)
+        .select();
       if (error) throw error;
+      // Um UPDATE que não bate com nenhuma linha (ex: bloqueado pelo RLS)
+      // NÃO gera erro no Supabase — precisa checar manualmente.
+      if (!data || data.length === 0) {
+        throw new Error('Nenhuma linha atualizada no servidor (possível bloqueio de permissão).');
+      }
       await LSR_DB.turnos.update(turnoId, { _synced: true });
     } catch (err) {
       console.warn('[Turnos] Fechamento salvo offline, será sincronizado depois:', err);
@@ -257,7 +263,7 @@ const Turnos = {
     const turnoAtualizado = await LSR_DB.turnos.get(turnoId);
 
     try {
-      const { error } = await supabaseClient
+      const { data, error } = await supabaseClient
         .from('turnos')
         .update({
           km_inicial: kmInicial,
@@ -265,8 +271,12 @@ const Turnos = {
           faturamento_bruto: faturamentoBruto,
           preco_combustivel_turno: precoCombustivelTurno
         })
-        .eq('id', turnoId);
+        .eq('id', turnoId)
+        .select();
       if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error('Nenhuma linha atualizada no servidor (possível bloqueio de permissão).');
+      }
       await LSR_DB.turnos.update(turnoId, { _synced: true });
     } catch (err) {
       console.warn('[Turnos] Edição retroativa salva offline, será sincronizada depois:', err);
@@ -284,11 +294,15 @@ const Turnos = {
     await LSR_DB.turnos.update(turnoId, { status: 'descartado', updated_at: agora, _synced: false });
 
     try {
-      const { error } = await supabaseClient
+      const { data, error } = await supabaseClient
         .from('turnos')
         .update({ status: 'descartado' })
-        .eq('id', turnoId);
+        .eq('id', turnoId)
+        .select();
       if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error('Nenhuma linha atualizada no servidor (possível bloqueio de permissão).');
+      }
       await LSR_DB.turnos.update(turnoId, { _synced: true });
     } catch (err) {
       console.warn('[Turnos] Descarte salvo offline, será sincronizado depois:', err);
