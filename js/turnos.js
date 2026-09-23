@@ -63,11 +63,13 @@ const Turnos = {
         const remoto = data[0];
         const local = await LSR_DB.turnos.get(remoto.id);
 
-        // PROTEÇÃO: se existe uma mudança local ainda não sincronizada
-        // pra esse turno (ex: foi fechado offline e o servidor ainda não
-        // sabe disso), NUNCA sobrescreve o local com o remoto desatualizado.
-        if (local && local._synced === false) {
-          return local.status === 'ativo' ? local : null;
+        // REGRA DE DOMÍNIO (mais forte que checar _synced): um turno que já
+        // está FECHADO ou DESCARTADO localmente NUNCA pode "voltar a ser
+        // ativo" por causa de uma leitura remota desatualizada — não existe
+        // reabertura de turno no mundo real. Isso protege mesmo se algum
+        // outro bug de sincronização corromper a flag _synced.
+        if (local && local.status !== 'ativo') {
+          return null;
         }
 
         const turno = { ...remoto, _synced: true };

@@ -67,7 +67,13 @@ const Sync = {
       return;
     }
 
-    const localMaisNovo = new Date(local.updated_at).getTime() > new Date(remoto.updated_at).getTime();
+    // REGRA DE DOMÍNIO: um turno FECHADO ou DESCARTADO localmente sempre
+    // vence, independente da comparação de horário — não existe reabertura
+    // de turno no mundo real, então não faz sentido o servidor "vencer" e
+    // voltar o turno pra ativo nessa situação, mesmo com problema de relógio
+    // ou corrida entre chamadas.
+    const localEhEstadoFinal = local.status === 'fechado' || local.status === 'descartado';
+    const localMaisNovo = localEhEstadoFinal || (new Date(local.updated_at).getTime() > new Date(remoto.updated_at).getTime());
 
     if (localMaisNovo) {
       // Local vence (Last-Write-Wins): empurra os dados locais
