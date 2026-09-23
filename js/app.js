@@ -61,6 +61,8 @@ let veiculoParaDesativarId = null;
 let turnoAtivoAtual = null;
 let veiculosAtivosCache = [];
 let dadosEncerramentoPendente = null; // guarda os dados enquanto espera o duplo clique de confirmação
+let origemTelaResultado = 'fechamento'; // 'fechamento' ou 'historico' — controla os botões da tela de detalhe
+let turnoDetalheAtual = null; // { turno, veiculo } exibido na tela de detalhe (quando vindo do histórico)
 
 /**
  * Após login (ou ao reabrir o app com sessão salva), confere se o
@@ -363,6 +365,11 @@ async function processarEncerramentoFinal() {
     document.getElementById('modal-confirmar-encerrar').classList.add('hidden');
     fecharModalEncerrarTurno();
     dadosEncerramentoPendente = null;
+
+    origemTelaResultado = 'fechamento';
+    turnoDetalheAtual = null;
+    document.getElementById('btn-editar-detalhe').classList.add('hidden');
+    document.getElementById('btn-voltar-resultado').textContent = 'Voltar à home';
     mostrarTela('tela-resultado-turno');
   } catch (err) {
     console.error(err);
@@ -425,7 +432,7 @@ async function carregarHistorico() {
           <p class="text-xs" style="color:var(--lsr-text-muted)">${r.lucroPorKm !== null ? formatarMoeda(r.lucroPorKm) + '/km' : ''}</p>
         </div>
       `;
-      card.addEventListener('click', () => abrirModalEditarTurno(t, veiculo));
+      card.addEventListener('click', () => abrirDetalheTurno(t, veiculo));
     } else {
       card.className = 'card-lsr p-4 flex items-center justify-between opacity-50';
       card.innerHTML = `
@@ -467,6 +474,22 @@ function atualizarResumoHistorico(turnosFechados, veiculosMap) {
   document.getElementById('resumo-semana-turnos').textContent = `${semana.qtd} turno(s)`;
   document.getElementById('resumo-mes-lucro').textContent = formatarMoeda(mes.lucro);
   document.getElementById('resumo-mes-turnos').textContent = `${mes.qtd} turno(s)`;
+}
+
+/**
+ * Mostra a tela de detalhe/resultado de um turno JÁ FECHADO,
+ * vindo do Histórico — com botão de Editar visível.
+ */
+function abrirDetalheTurno(turno, veiculo) {
+  origemTelaResultado = 'historico';
+  turnoDetalheAtual = { turno, veiculo };
+
+  const r = calcularTurno(turno, veiculo);
+  exibirResultadoTurno(r);
+
+  document.getElementById('btn-editar-detalhe').classList.remove('hidden');
+  document.getElementById('btn-voltar-resultado').textContent = 'Voltar ao Histórico';
+  mostrarTela('tela-resultado-turno');
 }
 
 function abrirModalEditarTurno(turno, veiculo) {
@@ -798,8 +821,18 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-confirmar-encerrar-final').addEventListener('click', processarEncerramentoFinal);
 
   document.getElementById('btn-voltar-resultado').addEventListener('click', async () => {
-    mostrarTela('tela-home');
-    await carregarEstadoHome();
+    if (origemTelaResultado === 'historico') {
+      mostrarTela('tela-historico');
+      await carregarHistorico();
+    } else {
+      mostrarTela('tela-home');
+      await carregarEstadoHome();
+    }
+  });
+
+  document.getElementById('btn-editar-detalhe').addEventListener('click', () => {
+    if (!turnoDetalheAtual) return;
+    abrirModalEditarTurno(turnoDetalheAtual.turno, turnoDetalheAtual.veiculo);
   });
 
   // ------------------------------------------------------------
@@ -864,9 +897,15 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.textContent = 'Salvando...';
 
     try {
-      await Turnos.atualizarRetroativo(turnoId, { kmInicial, kmFinal, faturamentoBruto, precoCombustivelTurno });
+      const turnoAtualizado = await Turnos.atualizarRetroativo(turnoId, { kmInicial, kmFinal, faturamentoBruto, precoCombustivelTurno });
       fecharModalEditarTurno();
-      await carregarHistorico();
+
+      // Se a edição partiu da tela de detalhe, volta pra ela já atualizada
+      if (turnoDetalheAtual && turnoDetalheAtual.turno.id === turnoId) {
+        abrirDetalheTurno(turnoAtualizado, turnoDetalheAtual.veiculo);
+      } else {
+        await carregarHistorico();
+      }
     } catch (err) {
       mostrarErro('erro-editar-turno', 'Não foi possível salvar. Verifique sua conexão.');
       console.error(err);
