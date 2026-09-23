@@ -263,7 +263,7 @@ const Turnos = {
       if (error) throw error;
       // Um UPDATE que não bate com nenhuma linha (ex: bloqueado pelo RLS)
       // NÃO gera erro no Supabase — precisa checar manualmente.
-      if (!data || data.length === 0) {
+      if (!Array.isArray(data) || data.length === 0) {
         throw new Error('Nenhuma linha atualizada no servidor (possível bloqueio de permissão).');
       }
       await LSR_DB.turnos.update(turnoId, { _synced: true });
@@ -306,7 +306,7 @@ const Turnos = {
         .eq('id', turnoId)
         .select();
       if (error) throw error;
-      if (!data || data.length === 0) {
+      if (!Array.isArray(data) || data.length === 0) {
         throw new Error('Nenhuma linha atualizada no servidor (possível bloqueio de permissão).');
       }
       await LSR_DB.turnos.update(turnoId, { _synced: true });
@@ -332,7 +332,7 @@ const Turnos = {
         .eq('id', turnoId)
         .select();
       if (error) throw error;
-      if (!data || data.length === 0) {
+      if (!Array.isArray(data) || data.length === 0) {
         throw new Error('Nenhuma linha atualizada no servidor (possível bloqueio de permissão).');
       }
       await LSR_DB.turnos.update(turnoId, { _synced: true });

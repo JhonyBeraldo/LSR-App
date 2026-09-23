@@ -87,7 +87,7 @@ const Sync = {
       // UPDATE que bate 0 linhas (ex: bloqueado pelo RLS) NÃO gera erro
       // sozinho — precisa checar manualmente pra não marcar como sincronizado
       // algo que na verdade nunca chegou no servidor.
-      if (!data || data.length === 0) {
+      if (!Array.isArray(data) || data.length === 0) {
         throw new Error('Nenhuma linha atualizada no servidor ao sincronizar (possível bloqueio de permissão).');
       }
       await LSR_DB.turnos.update(turnoId, { _synced: true });
