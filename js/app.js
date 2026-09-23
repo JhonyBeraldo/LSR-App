@@ -15,23 +15,58 @@ if ('serviceWorker' in navigator) {
 }
 
 // ------------------------------------------------------------
-// Indicador de conectividade
+// Indicador de conectividade + status de sincronização
 // ------------------------------------------------------------
-function atualizarStatusConexao() {
+async function atualizarStatusConexao() {
   const badge = document.getElementById('status-conexao');
   if (!badge) return;
-  if (navigator.onLine) {
-    badge.textContent = 'Online';
-    badge.className = 'text-xs px-2 py-1 rounded-full bg-green-900 text-lsr-green';
-    badge.style.color = 'var(--lsr-green)';
-  } else {
-    badge.textContent = 'Offline';
-    badge.className = 'text-xs px-2 py-1 rounded-full';
+
+  if (!navigator.onLine) {
+    badge.textContent = '○ Offline';
     badge.style.color = 'var(--lsr-text-muted)';
+    return;
+  }
+
+  const pendentes = await Sync.contarPendentes();
+  if (pendentes > 0) {
+    badge.textContent = `⏳ ${pendentes} pendente${pendentes > 1 ? 's' : ''}`;
+    badge.style.color = '#ffb74d';
+  } else {
+    badge.textContent = '✓ Sincronizado';
+    badge.style.color = 'var(--lsr-green)';
   }
 }
-window.addEventListener('online', atualizarStatusConexao);
+
+/**
+ * Ao reconectar: reconcilia a fila pendente (Last-Write-Wins) e
+ * atualiza tanto o indicador quanto as telas visíveis.
+ */
+async function reconciliarAoReconectar() {
+  await atualizarStatusConexao();
+  await Sync.processarFila();
+  await atualizarStatusConexao();
+
+  // Se a home ou o histórico estiverem visíveis, refletem os dados já sincronizados
+  if (usuarioAtual) {
+    if (!document.getElementById('tela-home').classList.contains('hidden')) {
+      await carregarEstadoHome();
+    }
+    if (!document.getElementById('tela-historico').classList.contains('hidden')) {
+      await carregarHistorico();
+    }
+  }
+}
+
+window.addEventListener('online', reconciliarAoReconectar);
 window.addEventListener('offline', atualizarStatusConexao);
+
+// Verificação periódica (cobre o caso de ficar online sem disparar o evento,
+// e reforça a sincronização de itens que falharam na primeira tentativa)
+setInterval(() => {
+  if (navigator.onLine) {
+    Sync.processarFila().then(atualizarStatusConexao);
+  }
+}, 60000);
 
 // ------------------------------------------------------------
 // Navegação simples entre telas (login / cadastro / home)
@@ -84,6 +119,16 @@ async function verificarAcessoEDirecionar(usuario) {
     document.getElementById('home-email').textContent = perfil.nome || 'Motorista';
     mostrarTela('tela-home');
     await carregarEstadoHome();
+
+    // Reconcilia qualquer coisa que tenha ficado pendente de uma sessão offline anterior
+    if (navigator.onLine) {
+      Sync.processarFila().then(async () => {
+        await atualizarStatusConexao();
+        if (!document.getElementById('tela-home').classList.contains('hidden')) {
+          await carregarEstadoHome();
+        }
+      });
+    }
   } catch (err) {
     console.error('[App] Erro ao verificar perfil:', err);
     // Sem conexão para checar o perfil: por segurança, não libera acesso.
@@ -274,6 +319,8 @@ async function carregarEstadoHome() {
     document.getElementById('bloco-turno-ativo').classList.add('hidden');
     document.getElementById('bloco-sem-turno').classList.remove('hidden');
   }
+
+  await atualizarStatusConexao();
 }
 
 function verificarTurnoEsquecido() {
@@ -458,6 +505,8 @@ async function carregarHistorico() {
 
     container.appendChild(card);
   });
+
+  await atualizarStatusConexao();
 }
 
 function atualizarResumoHistorico(turnosFechados, veiculosMap) {
