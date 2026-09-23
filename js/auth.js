@@ -87,6 +87,35 @@ const Auth = {
   },
 
   /**
+   * Lê uma configuração global do sistema (ex: prazo de tolerância
+   * offline). Retorna null se não encontrar.
+   */
+  async getConfig(chave) {
+    const { data, error } = await supabaseClient
+      .from('config_sistema')
+      .select('valor')
+      .eq('chave', chave)
+      .maybeSingle();
+    if (error) throw error;
+    return data ? data.valor : null;
+  },
+
+  /**
+   * Atualiza uma configuração global do sistema. Só funciona pra
+   * usuários com role='master' (RLS garante isso no servidor).
+   */
+  async atualizarConfig(chave, valor) {
+    const { data, error } = await supabaseClient
+      .from('config_sistema')
+      .update({ valor: String(valor) })
+      .eq('chave', chave)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  /**
    * Atualiza o preço de combustível atual do motorista (usado como
    * valor padrão sugerido ao encerrar um turno — mas é editável na hora).
    */

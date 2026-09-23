@@ -96,6 +96,43 @@ let veiculoParaDesativarId = null;
 let turnoAtivoAtual = null;
 let veiculosAtivosCache = [];
 let dadosEncerramentoPendente = null; // guarda os dados enquanto espera o duplo clique de confirmação
+
+// ------------------------------------------------------------
+// Tolerância offline: se o app não conseguir confirmar online que o
+// motorista está aprovado, confia na última confirmação bem-sucedida
+// por até N dias (configurável pelo master; padrão 3 dias).
+// ------------------------------------------------------------
+const SESSAO_CACHE_KEY = 'lsr_sessao_cache';
+const PRAZO_CACHE_KEY = 'lsr_prazo_offline_dias';
+const PRAZO_PADRAO_DIAS = 3;
+
+function salvarSessaoCache(usuario, perfil) {
+  try {
+    localStorage.setItem(SESSAO_CACHE_KEY, JSON.stringify({
+      userId: usuario.id,
+      nome: perfil.nome,
+      aprovadoEm: Date.now()
+    }));
+  } catch (e) { /* localStorage indisponível — segue sem cache */ }
+}
+
+function lerSessaoCache() {
+  try {
+    const raw = localStorage.getItem(SESSAO_CACHE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function salvarPrazoCache(dias) {
+  try { localStorage.setItem(PRAZO_CACHE_KEY, String(dias)); } catch (e) {}
+}
+
+function lerPrazoDiasCache() {
+  const valor = parseInt(localStorage.getItem(PRAZO_CACHE_KEY), 10);
+  return isNaN(valor) || valor <= 0 ? PRAZO_PADRAO_DIAS : valor;
+}
 let origemTelaResultado = 'fechamento'; // 'fechamento' ou 'historico' — controla os botões da tela de detalhe
 let turnoDetalheAtual = null; // { turno, veiculo } exibido na tela de detalhe (quando vindo do histórico)
 
@@ -116,6 +153,13 @@ async function verificarAcessoEDirecionar(usuario) {
     }
 
     usuarioAtual = usuario;
+    salvarSessaoCache(usuario, perfil);
+
+    // Atualiza o prazo de tolerância offline em cache (melhor esforço, não bloqueia)
+    Auth.getConfig('prazo_aprovacao_offline_dias')
+      .then((v) => { if (v) salvarPrazoCache(parseInt(v, 10)); })
+      .catch(() => {});
+
     document.getElementById('home-email').textContent = perfil.nome || 'Motorista';
     mostrarTela('tela-home');
     await carregarEstadoHome();
@@ -130,10 +174,28 @@ async function verificarAcessoEDirecionar(usuario) {
       });
     }
   } catch (err) {
-    console.error('[App] Erro ao verificar perfil:', err);
-    // Sem conexão para checar o perfil: por segurança, não libera acesso.
-    await Auth.logout();
-    mostrarErro('erro-login', 'Não foi possível verificar seu acesso. Tente novamente com conexão à internet.');
+    console.error('[App] Não foi possível confirmar o acesso online:', err);
+
+    // Sem conexão pra checar o perfil: confia na última confirmação
+    // bem-sucedida, DENTRO do prazo de tolerância configurado.
+    const cache = lerSessaoCache();
+    if (cache && cache.userId === usuario.id) {
+      const prazoDias = lerPrazoDiasCache();
+      const horasDesdeAprovado = (Date.now() - cache.aprovadoEm) / (1000 * 60 * 60);
+
+      if (horasDesdeAprovado <= prazoDias * 24) {
+        usuarioAtual = usuario;
+        perfilAtual = { nome: cache.nome, is_ativo: true };
+        document.getElementById('home-email').textContent = cache.nome || 'Motorista';
+        mostrarTela('tela-home');
+        await carregarEstadoHome();
+        return;
+      }
+    }
+
+    // Sem cache válido ou prazo expirado: não dá pra confirmar o acesso com segurança.
+    try { await Auth.logout(); } catch (e) { /* já estamos offline, ignora */ }
+    mostrarErro('erro-login', 'Não foi possível confirmar seu acesso. Conecte-se à internet para continuar.');
     mostrarTela('tela-login');
   }
 }
@@ -680,6 +742,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Logout
   document.getElementById('btn-logout').addEventListener('click', async () => {
     await Auth.logout();
+    try { localStorage.removeItem(SESSAO_CACHE_KEY); } catch (e) {}
     usuarioAtual = null;
     perfilAtual = null;
     turnoAtivoAtual = null;
