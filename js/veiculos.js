@@ -87,6 +87,13 @@ const Veiculos = {
     let v = await LSR_DB.veiculos.get(id);
     if (v) return v;
 
+    // Não está no cache local — só vale a pena tentar a rede se
+    // realmente há conexão; senão, falha rápido em vez de esperar
+    // o fetch estourar por conta própria.
+    if (!navigator.onLine) {
+      throw new Error('Veículo não está no cache local e o app está offline.');
+    }
+
     const { data, error } = await supabaseClient
       .from('veiculos')
       .select('*')

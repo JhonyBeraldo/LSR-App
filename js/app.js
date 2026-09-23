@@ -374,7 +374,12 @@ async function carregarEstadoHome() {
     document.getElementById('bloco-sem-turno').classList.add('hidden');
     document.getElementById('bloco-turno-ativo').classList.remove('hidden');
 
-    const veiculo = await Veiculos.obterPorId(turnoAtivoAtual.veiculo_id);
+    let veiculo = null;
+    try {
+      veiculo = await Veiculos.obterPorId(turnoAtivoAtual.veiculo_id);
+    } catch (err) {
+      console.warn('[App] Veículo do turno ativo não disponível offline:', err);
+    }
     document.getElementById('turno-ativo-veiculo').textContent = veiculo
       ? `${iconeTipoVeiculo(veiculo.tipo)} ${veiculo.nome_modelo}`
       : 'Veículo';
@@ -470,7 +475,12 @@ async function processarEncerramentoFinal() {
       precoCombustivelTurno: dadosEncerramentoPendente.precoCombustivelTurno
     });
 
-    const veiculo = await Veiculos.obterPorId(turnoFechado.veiculo_id);
+    let veiculo = null;
+    try {
+      veiculo = await Veiculos.obterPorId(turnoFechado.veiculo_id);
+    } catch (err) {
+      console.warn('[App] Veículo não disponível offline pro cálculo do resultado:', err);
+    }
     const resultado = calcularTurno(turnoFechado, veiculo);
 
     exibirResultadoTurno(resultado);
@@ -480,7 +490,7 @@ async function processarEncerramentoFinal() {
     // novo), o valor sugerido já vem correto. O snapshot histórico deste turno
     // (preco_combustivel_turno) já foi salvo congelado e não é afetado por isso.
     const precoDigitado = dadosEncerramentoPendente.precoCombustivelTurno;
-    if (precoDigitado !== perfilAtual?.preco_combustivel_atual) {
+    if (navigator.onLine && precoDigitado !== perfilAtual?.preco_combustivel_atual) {
       try {
         perfilAtual = await Auth.atualizarPrecoCombustivel(usuarioAtual.id, precoDigitado);
       } catch (err) {
@@ -525,17 +535,18 @@ async function carregarHistorico() {
   }
   vazio.classList.add('hidden');
 
-  // Monta um mapa de veículos (cache-first, com fallback remoto)
+  // Monta um mapa de veículos (cache-first, com fallback remoto).
+  // Busca todos os veículos distintos EM PARALELO (não um de cada vez),
+  // já que isso não tinha dependência entre si e só deixava tudo mais lento.
+  const idsVeiculosUnicos = [...new Set(turnos.map((t) => t.veiculo_id))];
   const veiculosMap = {};
-  for (const t of turnos) {
-    if (!veiculosMap[t.veiculo_id]) {
-      try {
-        veiculosMap[t.veiculo_id] = await Veiculos.obterPorId(t.veiculo_id);
-      } catch (err) {
-        veiculosMap[t.veiculo_id] = null;
-      }
+  await Promise.all(idsVeiculosUnicos.map(async (veiculoId) => {
+    try {
+      veiculosMap[veiculoId] = await Veiculos.obterPorId(veiculoId);
+    } catch (err) {
+      veiculosMap[veiculoId] = null;
     }
-  }
+  }));
 
   atualizarResumoHistorico(turnos.filter((t) => t.status === 'fechado'), veiculosMap);
 

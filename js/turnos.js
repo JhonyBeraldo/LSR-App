@@ -26,7 +26,12 @@ const Turnos = {
     if (tempoInicioISO && tempoFimISO) {
       const ms = new Date(tempoFimISO).getTime() - new Date(tempoInicioISO).getTime();
       tempoTotalHoras = ms / (1000 * 60 * 60);
-      if (tempoTotalHoras > 0) {
+
+      // Turnos com menos de 1 minuto de duração (ex: testes rápidos de
+      // abrir/fechar) fariam a extrapolação por hora virar um número sem
+      // sentido (ex: R$ 25.000/h). Abaixo desse limiar, não mostra o valor.
+      const DURACAO_MINIMA_HORAS = 1 / 60;
+      if (tempoTotalHoras >= DURACAO_MINIMA_HORAS) {
         lucroPorHora = lucro / tempoTotalHoras;
       }
     }
@@ -51,6 +56,10 @@ const Turnos = {
   // ------------------------------------------------------------
   async buscarTurnoAtivo(userId) {
     try {
+      // Se o navegador já sabe que está offline, nem tenta a rede —
+      // vai direto pro fallback local, sem esperar o fetch falhar.
+      if (!navigator.onLine) throw new Error('offline (detectado antes de tentar)');
+
       const { data, error } = await supabaseClient
         .from('turnos')
         .select('*')
@@ -90,6 +99,8 @@ const Turnos = {
 
   async buscarUltimoTurnoFechado(userId, veiculoId) {
     try {
+      if (!navigator.onLine) throw new Error('offline (detectado antes de tentar)');
+
       const { data, error } = await supabaseClient
         .from('turnos')
         .select('*')
@@ -126,6 +137,8 @@ const Turnos = {
 
   async listarHistorico(userId, limite = 30) {
     try {
+      if (!navigator.onLine) throw new Error('offline (detectado antes de tentar)');
+
       const { data, error } = await supabaseClient
         .from('turnos')
         .select('*')
@@ -215,6 +228,7 @@ const Turnos = {
     await LSR_DB.turnos.put(registro);
 
     try {
+      if (!navigator.onLine) throw new Error('offline (detectado antes de tentar)');
       const { id, _synced, ...payloadRemoto } = registro;
       const { error } = await supabaseClient.from('turnos').insert({ id, ...payloadRemoto });
       if (error) throw error;
@@ -249,6 +263,7 @@ const Turnos = {
     const turnoAtualizado = await LSR_DB.turnos.get(turnoId);
 
     try {
+      if (!navigator.onLine) throw new Error('offline (detectado antes de tentar)');
       const { data, error } = await supabaseClient
         .from('turnos')
         .update({
@@ -295,6 +310,7 @@ const Turnos = {
     const turnoAtualizado = await LSR_DB.turnos.get(turnoId);
 
     try {
+      if (!navigator.onLine) throw new Error('offline (detectado antes de tentar)');
       const { data, error } = await supabaseClient
         .from('turnos')
         .update({
@@ -326,6 +342,7 @@ const Turnos = {
     await LSR_DB.turnos.update(turnoId, { status: 'descartado', updated_at: agora, _synced: false });
 
     try {
+      if (!navigator.onLine) throw new Error('offline (detectado antes de tentar)');
       const { data, error } = await supabaseClient
         .from('turnos')
         .update({ status: 'descartado' })
