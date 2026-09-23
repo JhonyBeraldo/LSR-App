@@ -208,6 +208,30 @@ function formatarHorario(iso) {
   return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
+function formatarDataBR(dataISO) {
+  // dataISO no formato "AAAA-MM-DD"
+  const [ano, mes, dia] = dataISO.split('-');
+  return `${dia}/${mes}/${ano}`;
+}
+
+/**
+ * Roda o motor de cálculo pra um turno FECHADO, usando os dados
+ * do veículo (cache local, com fallback remoto via Veiculos.obterPorId).
+ */
+function calcularTurno(turno, veiculo) {
+  return Turnos.calcular({
+    kmInicial: turno.km_inicial,
+    kmFinal: turno.km_final,
+    autonomiaKml: veiculo ? veiculo.autonomia_kml : 0,
+    precoCombustivelTurno: turno.preco_combustivel_turno,
+    taxaManutencaoKm: veiculo ? veiculo.taxa_manutencao_km : 0,
+    taxaDepreciacaoKm: veiculo ? veiculo.taxa_depreciacao_km : 0,
+    faturamentoBruto: turno.faturamento_bruto,
+    tempoInicioISO: turno.tempo_inicio,
+    tempoFimISO: turno.tempo_fim
+  });
+}
+
 // ------------------------------------------------------------
 // HOME: preço de combustível + estado do turno (ativo ou não)
 // ------------------------------------------------------------
@@ -224,7 +248,7 @@ async function carregarEstadoHome() {
     document.getElementById('bloco-sem-turno').classList.add('hidden');
     document.getElementById('bloco-turno-ativo').classList.remove('hidden');
 
-    const veiculo = await LSR_DB.veiculos.get(turnoAtivoAtual.veiculo_id);
+    const veiculo = await Veiculos.obterPorId(turnoAtivoAtual.veiculo_id);
     document.getElementById('turno-ativo-veiculo').textContent = veiculo
       ? `${iconeTipoVeiculo(veiculo.tipo)} ${veiculo.nome_modelo}`
       : 'Veículo';
@@ -318,18 +342,8 @@ async function processarEncerramentoFinal() {
       precoCombustivelTurno: dadosEncerramentoPendente.precoCombustivelTurno
     });
 
-    const veiculo = await LSR_DB.veiculos.get(turnoFechado.veiculo_id);
-    const resultado = Turnos.calcular({
-      kmInicial: turnoFechado.km_inicial,
-      kmFinal: turnoFechado.km_final,
-      autonomiaKml: veiculo.autonomia_kml,
-      precoCombustivelTurno: turnoFechado.preco_combustivel_turno,
-      taxaManutencaoKm: veiculo.taxa_manutencao_km,
-      taxaDepreciacaoKm: veiculo.taxa_depreciacao_km,
-      faturamentoBruto: turnoFechado.faturamento_bruto,
-      tempoInicioISO: turnoFechado.tempo_inicio,
-      tempoFimISO: turnoFechado.tempo_fim
-    });
+    const veiculo = await Veiculos.obterPorId(turnoFechado.veiculo_id);
+    const resultado = calcularTurno(turnoFechado, veiculo);
 
     exibirResultadoTurno(resultado);
 
@@ -357,6 +371,118 @@ async function processarEncerramentoFinal() {
     btn.disabled = false;
     btn.textContent = 'Confirmar';
   }
+}
+
+// ------------------------------------------------------------
+// HISTÓRICO
+// ------------------------------------------------------------
+async function carregarHistorico() {
+  const container = document.getElementById('lista-historico');
+  const vazio = document.getElementById('historico-vazio');
+  container.innerHTML = '<p class="text-sm text-center py-4" style="color:var(--lsr-text-muted)">Carregando...</p>';
+
+  const turnos = await Turnos.listarHistorico(usuarioAtual.id, 200);
+
+  if (!turnos.length) {
+    container.innerHTML = '';
+    vazio.classList.remove('hidden');
+    atualizarResumoHistorico([], {});
+    return;
+  }
+  vazio.classList.add('hidden');
+
+  // Monta um mapa de veículos (cache-first, com fallback remoto)
+  const veiculosMap = {};
+  for (const t of turnos) {
+    if (!veiculosMap[t.veiculo_id]) {
+      try {
+        veiculosMap[t.veiculo_id] = await Veiculos.obterPorId(t.veiculo_id);
+      } catch (err) {
+        veiculosMap[t.veiculo_id] = null;
+      }
+    }
+  }
+
+  atualizarResumoHistorico(turnos.filter((t) => t.status === 'fechado'), veiculosMap);
+
+  container.innerHTML = '';
+  turnos.forEach((t) => {
+    const veiculo = veiculosMap[t.veiculo_id];
+    const nomeVeiculo = veiculo ? `${iconeTipoVeiculo(veiculo.tipo)} ${veiculo.nome_modelo}` : 'Veículo';
+    const card = document.createElement('div');
+
+    if (t.status === 'fechado') {
+      const r = calcularTurno(t, veiculo);
+      const corLucro = r.lucro >= 0 ? 'var(--lsr-green)' : 'var(--lsr-red)';
+      card.className = 'card-lsr p-4 flex items-center justify-between cursor-pointer';
+      card.innerHTML = `
+        <div>
+          <p class="text-white font-semibold">${formatarDataBR(t.data_turno)}</p>
+          <p class="text-xs" style="color:var(--lsr-text-muted)">${nomeVeiculo} · ${r.dist.toFixed(1)} km</p>
+        </div>
+        <div class="text-right">
+          <p class="font-bold" style="color:${corLucro}">${formatarMoeda(r.lucro)}</p>
+          <p class="text-xs" style="color:var(--lsr-text-muted)">${r.lucroPorKm !== null ? formatarMoeda(r.lucroPorKm) + '/km' : ''}</p>
+        </div>
+      `;
+      card.addEventListener('click', () => abrirModalEditarTurno(t, veiculo));
+    } else {
+      card.className = 'card-lsr p-4 flex items-center justify-between opacity-50';
+      card.innerHTML = `
+        <div>
+          <p class="text-white font-semibold">${formatarDataBR(t.data_turno)}</p>
+          <p class="text-xs" style="color:var(--lsr-text-muted)">${nomeVeiculo}</p>
+        </div>
+        <p class="text-xs" style="color:var(--lsr-text-muted)">Descartado</p>
+      `;
+    }
+
+    container.appendChild(card);
+  });
+}
+
+function atualizarResumoHistorico(turnosFechados, veiculosMap) {
+  const hoje = new Date();
+  const seteDiasAtras = new Date(hoje);
+  seteDiasAtras.setDate(hoje.getDate() - 6);
+  const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+
+  function resumoDoPeriodo(dataMinima) {
+    let lucro = 0;
+    let qtd = 0;
+    turnosFechados.forEach((t) => {
+      if (new Date(t.data_turno) >= dataMinima) {
+        const r = calcularTurno(t, veiculosMap[t.veiculo_id]);
+        lucro += r.lucro;
+        qtd += 1;
+      }
+    });
+    return { lucro, qtd };
+  }
+
+  const semana = resumoDoPeriodo(seteDiasAtras);
+  const mes = resumoDoPeriodo(inicioMes);
+
+  document.getElementById('resumo-semana-lucro').textContent = formatarMoeda(semana.lucro);
+  document.getElementById('resumo-semana-turnos').textContent = `${semana.qtd} turno(s)`;
+  document.getElementById('resumo-mes-lucro').textContent = formatarMoeda(mes.lucro);
+  document.getElementById('resumo-mes-turnos').textContent = `${mes.qtd} turno(s)`;
+}
+
+function abrirModalEditarTurno(turno, veiculo) {
+  esconderErro('erro-editar-turno');
+  document.getElementById('editar-turno-id').value = turno.id;
+  document.getElementById('editar-turno-veiculo-nome').textContent = veiculo ? veiculo.nome_modelo : 'Veículo';
+  document.getElementById('editar-turno-data').textContent = formatarDataBR(turno.data_turno);
+  document.getElementById('input-editar-km-inicial').value = turno.km_inicial;
+  document.getElementById('input-editar-km-final').value = turno.km_final;
+  document.getElementById('input-editar-faturamento').value = turno.faturamento_bruto;
+  document.getElementById('input-editar-preco-combustivel').value = turno.preco_combustivel_turno;
+  document.getElementById('modal-editar-turno').classList.remove('hidden');
+}
+
+function fecharModalEditarTurno() {
+  document.getElementById('modal-editar-turno').classList.add('hidden');
 }
 
 function exibirResultadoTurno(r) {
@@ -690,6 +816,63 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (err) {
       console.error(err);
       alert('Não foi possível descartar o turno.');
+    }
+  });
+
+  // ------------------------------------------------------------
+  // Histórico
+  // ------------------------------------------------------------
+  document.getElementById('btn-ir-historico').addEventListener('click', () => {
+    mostrarTela('tela-historico');
+    carregarHistorico();
+  });
+  document.getElementById('btn-voltar-home-historico').addEventListener('click', () => {
+    mostrarTela('tela-home');
+  });
+
+  document.getElementById('btn-fechar-modal-editar').addEventListener('click', fecharModalEditarTurno);
+
+  document.getElementById('form-editar-turno').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    esconderErro('erro-editar-turno');
+
+    const turnoId = document.getElementById('editar-turno-id').value;
+    const kmInicial = parseFloat(document.getElementById('input-editar-km-inicial').value);
+    const kmFinal = parseFloat(document.getElementById('input-editar-km-final').value);
+    const faturamentoBruto = parseFloat(document.getElementById('input-editar-faturamento').value);
+    const precoCombustivelTurno = parseFloat(document.getElementById('input-editar-preco-combustivel').value);
+
+    if (isNaN(kmInicial) || kmInicial < 0) {
+      mostrarErro('erro-editar-turno', 'Digite um KM inicial válido.');
+      return;
+    }
+    if (isNaN(kmFinal) || kmFinal < kmInicial) {
+      mostrarErro('erro-editar-turno', 'O KM final não pode ser menor que o KM inicial.');
+      return;
+    }
+    if (isNaN(faturamentoBruto) || faturamentoBruto < 0) {
+      mostrarErro('erro-editar-turno', 'Digite um faturamento válido.');
+      return;
+    }
+    if (isNaN(precoCombustivelTurno) || precoCombustivelTurno < 0) {
+      mostrarErro('erro-editar-turno', 'Digite um preço de combustível válido.');
+      return;
+    }
+
+    const btn = e.target.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.textContent = 'Salvando...';
+
+    try {
+      await Turnos.atualizarRetroativo(turnoId, { kmInicial, kmFinal, faturamentoBruto, precoCombustivelTurno });
+      fecharModalEditarTurno();
+      await carregarHistorico();
+    } catch (err) {
+      mostrarErro('erro-editar-turno', 'Não foi possível salvar. Verifique sua conexão.');
+      console.error(err);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Salvar e recalcular';
     }
   });
 });

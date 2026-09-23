@@ -169,6 +169,45 @@ const Turnos = {
   },
 
   // ------------------------------------------------------------
+  // EDIÇÃO RETROATIVA (tela de Histórico)
+  // Recalcula tudo automaticamente, pois o motor de cálculo sempre
+  // lê os campos brutos (nunca guarda o resultado pronto).
+  // ------------------------------------------------------------
+  async atualizarRetroativo(turnoId, { kmInicial, kmFinal, faturamentoBruto, precoCombustivelTurno }) {
+    const agora = agoraISO();
+    const atualizacao = {
+      km_inicial: kmInicial,
+      km_final: kmFinal,
+      faturamento_bruto: faturamentoBruto,
+      preco_combustivel_turno: precoCombustivelTurno,
+      updated_at: agora,
+      _synced: false
+    };
+
+    await LSR_DB.turnos.update(turnoId, atualizacao);
+    const turnoAtualizado = await LSR_DB.turnos.get(turnoId);
+
+    try {
+      const { error } = await supabaseClient
+        .from('turnos')
+        .update({
+          km_inicial: kmInicial,
+          km_final: kmFinal,
+          faturamento_bruto: faturamentoBruto,
+          preco_combustivel_turno: precoCombustivelTurno
+        })
+        .eq('id', turnoId);
+      if (error) throw error;
+      await LSR_DB.turnos.update(turnoId, { _synced: true });
+    } catch (err) {
+      console.warn('[Turnos] Edição retroativa salva offline, será sincronizada depois:', err);
+      await this._enfileirarSync('turnos', 'update', turnoId);
+    }
+
+    return turnoAtualizado;
+  },
+
+  // ------------------------------------------------------------
   // DESCARTAR TURNO (fluxo do "turno esquecido")
   // ------------------------------------------------------------
   async descartar(turnoId) {

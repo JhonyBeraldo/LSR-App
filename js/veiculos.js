@@ -79,6 +79,26 @@ const Veiculos = {
   },
 
   /**
+   * Busca um veículo por id — cache local primeiro (Dexie), com fallback
+   * remoto. Funciona mesmo para veículos DESATIVADOS (histórico precisa
+   * exibir/calcular turnos de veículos que já saíram de uso).
+   */
+  async obterPorId(id) {
+    let v = await LSR_DB.veiculos.get(id);
+    if (v) return v;
+
+    const { data, error } = await supabaseClient
+      .from('veiculos')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (error) throw error;
+
+    await LSR_DB.veiculos.put({ ...data, _synced: true });
+    return data;
+  },
+
+  /**
    * Desativa um veículo (soft delete). Turnos históricos permanecem
    * vinculados e intactos — apenas some das opções de novos turnos.
    */
