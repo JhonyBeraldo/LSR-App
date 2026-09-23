@@ -3,7 +3,7 @@
 // IMPORTANTE: sempre que publicar mudanças em arquivos estáticos,
 // incremente CACHE_VERSION para forçar atualização nos celulares.
 
-const CACHE_VERSION = 'lsr-v14';
+const CACHE_VERSION = 'lsr-v15';
 // Caminhos RELATIVOS (sem "/" na frente) — essencial para funcionar
 // em subpasta (ex: GitHub Pages de projeto: usuario.github.io/LSR-App/).
 const APP_SHELL = [
@@ -56,16 +56,15 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Chamadas à API (Supabase) sempre tentam rede primeiro
+  // Chamadas à API (Supabase): deixa a rede tentar normalmente, SEM
+  // fabricar uma resposta falsa em caso de falha. Uma resposta fake
+  // com status 200 engana o cliente Supabase, que interpreta como
+  // "sucesso" mesmo a chamada real nunca tendo acontecido — foi
+  // exatamente isso que causava turnos "sincronizados" que nunca
+  // chegavam no servidor de verdade. Deixando o fetch falhar de
+  // verdade, o app sabe honestamente que precisa tentar de novo depois.
   if (url.hostname.includes('supabase.co')) {
-    event.respondWith(
-      fetch(event.request).catch(() => {
-        return new Response(
-          JSON.stringify({ error: 'offline' }),
-          { headers: { 'Content-Type': 'application/json' } }
-        );
-      })
-    );
+    event.respondWith(fetch(event.request));
     return;
   }
 
