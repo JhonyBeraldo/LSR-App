@@ -723,43 +723,151 @@ function baixarPdfRelatorio() {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
 
-  doc.setFontSize(16);
-  doc.text('Relatório Financeiro - LSR App', 14, 18);
-  doc.setFontSize(10);
-  doc.text(`Motorista: ${perfilAtual?.nome || ''}`, 14, 26);
-  doc.text(`Período: ${formatarDataBR(r.dataInicio)} a ${formatarDataBR(r.dataFim)}`, 14, 32);
+  // Paleta (versão print-safe da identidade do app)
+  const COR_ESCURA = [18, 18, 18];
+  const COR_VERDE = [0, 168, 89];
+  const COR_VERMELHA = [211, 47, 47];
+  const COR_CINZA_TEXTO = [110, 110, 110];
+  const COR_CINZA_CLARO_BG = [244, 244, 244];
+  const COR_CINZA_MEDIO_BG = [232, 232, 232];
 
-  let y = 44;
-  const linha = (rotulo, valor) => {
-    doc.setFont(undefined, 'normal');
-    doc.text(rotulo, 14, y);
-    doc.text(String(valor), 196, y, { align: 'right' });
-    y += 8;
-  };
+  const LARGURA_PAGINA = 210;
+  const MARGEM = 14;
+  const LARGURA_UTIL = LARGURA_PAGINA - MARGEM * 2;
+  const lucroPositivo = r.lucroTotal >= 0;
+  const corLucro = lucroPositivo ? COR_VERDE : COR_VERMELHA;
 
-  linha('Turnos fechados', r.quantidadeTurnos);
-  linha('Distância total', `${r.distanciaTotal.toFixed(1)} km`);
-  linha('Faturamento bruto', formatarMoeda(r.faturamentoTotal));
-  linha('Custo combustível', formatarMoeda(r.custoCombustivel));
-  linha('Custo manutenção', formatarMoeda(r.custoManutencao));
-  linha('Custo depreciação', formatarMoeda(r.custoDepreciacao));
-  linha('Custo total operacional', formatarMoeda(r.custoTotal));
+  // ------------------------------------------------------------
+  // Cabeçalho: faixa escura com o nome do app
+  // ------------------------------------------------------------
+  doc.setFillColor(...COR_ESCURA);
+  doc.rect(0, 0, LARGURA_PAGINA, 32, 'F');
 
+  doc.setTextColor(255, 255, 255);
   doc.setFont(undefined, 'bold');
-  doc.text('LUCRO LÍQUIDO', 14, y);
-  doc.text(formatarMoeda(r.lucroTotal), 196, y, { align: 'right' });
-  y += 12;
+  doc.setFontSize(20);
+  doc.text('LSR App', MARGEM, 16);
+
   doc.setFont(undefined, 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(...COR_VERDE);
+  doc.text('Lucro Sobre Rodas', MARGEM, 23);
 
-  linha('Lucro médio por turno', formatarMoeda(r.lucroMedioPorTurno));
-  linha('Lucro médio por km', r.lucroMedioPorKm !== null ? formatarMoeda(r.lucroMedioPorKm) : '—');
-  y += 4;
-  linha('Despesas reais de manutenção', formatarMoeda(r.totalDespesasReais));
-  linha('Qtd. de despesas no período', r.quantidadeDespesas);
+  doc.setFontSize(9);
+  doc.setTextColor(200, 200, 200);
+  doc.text('Relatório Financeiro', LARGURA_PAGINA - MARGEM, 16, { align: 'right' });
+  doc.text(`${formatarDataBR(r.dataInicio)}  a  ${formatarDataBR(r.dataFim)}`, LARGURA_PAGINA - MARGEM, 23, { align: 'right' });
 
+  // ------------------------------------------------------------
+  // Info do motorista
+  // ------------------------------------------------------------
+  let y = 42;
+  doc.setTextColor(60, 60, 60);
+  doc.setFontSize(11);
+  doc.setFont(undefined, 'bold');
+  doc.text(`Motorista: ${perfilAtual?.nome || '—'}`, MARGEM, y);
+
+  // ------------------------------------------------------------
+  // Card de destaque: LUCRO LÍQUIDO
+  // ------------------------------------------------------------
+  y += 8;
+  const alturaCardLucro = 28;
+  doc.setFillColor(...COR_CINZA_CLARO_BG);
+  doc.roundedRect(MARGEM, y, LARGURA_UTIL, alturaCardLucro, 3, 3, 'F');
+  doc.setDrawColor(...corLucro);
+  doc.setLineWidth(0.8);
+  doc.roundedRect(MARGEM, y, LARGURA_UTIL, alturaCardLucro, 3, 3, 'S');
+
+  doc.setTextColor(...COR_CINZA_TEXTO);
+  doc.setFont(undefined, 'normal');
+  doc.setFontSize(9);
+  doc.text('LUCRO LÍQUIDO DO PERÍODO', LARGURA_PAGINA / 2, y + 9, { align: 'center' });
+
+  doc.setTextColor(...corLucro);
+  doc.setFont(undefined, 'bold');
+  doc.setFontSize(22);
+  doc.text(formatarMoeda(r.lucroTotal), LARGURA_PAGINA / 2, y + 21, { align: 'center' });
+
+  y += alturaCardLucro + 12;
+
+  // ------------------------------------------------------------
+  // Helper: seção com título + linhas em "tabela" com zebra striping
+  // ------------------------------------------------------------
+  function tituloSecao(texto) {
+    doc.setFillColor(...COR_ESCURA);
+    doc.rect(MARGEM, y, 3, 5, 'F');
+    doc.setTextColor(30, 30, 30);
+    doc.setFont(undefined, 'bold');
+    doc.setFontSize(11);
+    doc.text(texto, MARGEM + 6, y + 4.5);
+    y += 9;
+  }
+
+  function linhaTabela(rotulo, valor, corValor, destaque) {
+    const alturaLinha = 8;
+    if (destaque) {
+      doc.setFillColor(...COR_CINZA_MEDIO_BG);
+      doc.rect(MARGEM, y - 5.5, LARGURA_UTIL, alturaLinha, 'F');
+    }
+    doc.setFont(undefined, destaque ? 'bold' : 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(70, 70, 70);
+    doc.text(rotulo, MARGEM + 3, y);
+    doc.setTextColor(...(corValor || [40, 40, 40]));
+    doc.text(String(valor), LARGURA_PAGINA - MARGEM - 3, y, { align: 'right' });
+    y += alturaLinha;
+  }
+
+  // ------------------------------------------------------------
+  // Resumo operacional
+  // ------------------------------------------------------------
+  tituloSecao('Resumo Operacional');
+  linhaTabela('Turnos fechados', r.quantidadeTurnos);
+  linhaTabela('Distância total', `${r.distanciaTotal.toFixed(1)} km`);
+  linhaTabela('Faturamento bruto', formatarMoeda(r.faturamentoTotal), COR_VERDE, true);
+
+  y += 6;
+
+  // ------------------------------------------------------------
+  // Custos operacionais
+  // ------------------------------------------------------------
+  tituloSecao('Custos Operacionais');
+  linhaTabela('Combustível', formatarMoeda(r.custoCombustivel), COR_VERMELHA);
+  linhaTabela('Manutenção', formatarMoeda(r.custoManutencao), COR_VERMELHA);
+  linhaTabela('Depreciação', formatarMoeda(r.custoDepreciacao), COR_VERMELHA);
+  linhaTabela('Custo total operacional', formatarMoeda(r.custoTotal), COR_VERMELHA, true);
+
+  y += 6;
+
+  // ------------------------------------------------------------
+  // Indicadores de performance
+  // ------------------------------------------------------------
+  tituloSecao('Indicadores');
+  linhaTabela('Lucro médio por turno', formatarMoeda(r.lucroMedioPorTurno), corLucro);
+  linhaTabela('Lucro médio por km', r.lucroMedioPorKm !== null ? formatarMoeda(r.lucroMedioPorKm) : '—', corLucro);
+
+  y += 6;
+
+  // ------------------------------------------------------------
+  // Despesas reais de manutenção
+  // ------------------------------------------------------------
+  tituloSecao('Despesas Reais de Manutenção');
+  linhaTabela('Total gasto no período', formatarMoeda(r.totalDespesasReais), COR_VERMELHA, true);
+  linhaTabela('Quantidade de despesas', r.quantidadeDespesas);
+
+  // ------------------------------------------------------------
+  // Rodapé
+  // ------------------------------------------------------------
+  const alturaPagina = doc.internal.pageSize.getHeight();
+  doc.setDrawColor(220, 220, 220);
+  doc.setLineWidth(0.3);
+  doc.line(MARGEM, alturaPagina - 18, LARGURA_PAGINA - MARGEM, alturaPagina - 18);
+
+  doc.setFont(undefined, 'normal');
   doc.setFontSize(8);
-  doc.setTextColor(150);
-  doc.text('Desenvolvido por Jhony Beraldo', 14, 285);
+  doc.setTextColor(...COR_CINZA_TEXTO);
+  doc.text('Desenvolvido por Jhony Beraldo', MARGEM, alturaPagina - 12);
+  doc.text(`Gerado em ${new Date().toLocaleDateString('pt-BR')}`, LARGURA_PAGINA - MARGEM, alturaPagina - 12, { align: 'right' });
 
   doc.save(`relatorio-lsr-${r.dataInicio}-a-${r.dataFim}.pdf`);
 }
