@@ -540,6 +540,53 @@ async function processarEncerramentoFinal() {
 // PAINEL MASTER
 // ------------------------------------------------------------
 let motoristaEmContextoId = null; // usado pelos modais de plano/reset de senha
+let motoristasCache = [];
+let turnosPorMotoristaCache = {};
+let diasAvisoCache = 3;
+let filtroTextoMotorista = '';
+let filtroApenasVencendo = false;
+
+const NOMES_PLANO = {
+  teste_7: 'Teste (7 dias)',
+  teste_15: 'Teste (15 dias)',
+  mensal: 'Mensal',
+  trimestral: 'Trimestral',
+  semestral: 'Semestral',
+  anual: 'Anual'
+};
+
+/**
+ * Dias restantes até o vencimento (negativo = já venceu). null se sem plano.
+ */
+function diasAteVencimento(dataISO) {
+  if (!dataISO) return null;
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  const venc = new Date(dataISO + 'T00:00:00');
+  return Math.round((venc - hoje) / (1000 * 60 * 60 * 24));
+}
+
+/**
+ * Abre o WhatsApp com uma mensagem de lembrete pré-preenchida.
+ */
+function abrirWhatsAppLembrete(whatsapp, nome, dias) {
+  let numero = (whatsapp || '').replace(/\D/g, '');
+  if (!numero) return;
+  if (numero.length <= 11) numero = '55' + numero; // adiciona código do Brasil se não tiver
+
+  let mensagem;
+  if (dias === null) {
+    mensagem = `Olá ${nome}! Tudo bem? Aqui é sobre o seu acesso ao LSR App.`;
+  } else if (dias < 0) {
+    mensagem = `Olá ${nome}! Seu plano do LSR App venceu há ${Math.abs(dias)} dia(s). Vamos renovar pra você continuar usando sem interrupções?`;
+  } else if (dias === 0) {
+    mensagem = `Olá ${nome}! Seu plano do LSR App vence hoje. Vamos renovar pra você continuar usando sem interrupções?`;
+  } else {
+    mensagem = `Olá ${nome}! Seu plano do LSR App vence em ${dias} dia(s). Vamos renovar pra você continuar usando sem interrupções?`;
+  }
+
+  window.open(`https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`, '_blank');
+}
 
 function formatarVencimento(dataISO) {
   if (!dataISO) return { texto: 'Sem plano definido', cor: 'var(--lsr-text-muted)' };
@@ -578,6 +625,10 @@ async function carregarPainelAdmin() {
     document.getElementById('admin-total-turnos').textContent = totalTurnos;
     document.getElementById('input-prazo-offline').value = prazoDias;
 
+    motoristasCache = motoristas;
+    turnosPorMotoristaCache = turnosPorMotorista;
+    diasAvisoCache = diasAviso;
+
     // Pendentes
     const containerPendentes = document.getElementById('admin-lista-pendentes');
     const pendentesVazio = document.getElementById('admin-pendentes-vazio');
@@ -604,67 +655,126 @@ async function carregarPainelAdmin() {
       });
     }
 
-    // Todos os motoristas
-    const containerTodos = document.getElementById('admin-lista-motoristas');
-    containerTodos.innerHTML = '';
-    motoristas.forEach((m) => {
-      const card = document.createElement('div');
-      card.className = 'card-lsr p-3 flex flex-col gap-2';
-      const statusCor = m.is_ativo ? 'var(--lsr-green)' : 'var(--lsr-red)';
-      const statusTexto = m.is_ativo ? 'Ativo' : 'Bloqueado';
-      const venc = formatarVencimento(m.plano_vencimento);
-      const totalTurnosMotorista = turnosPorMotorista[m.id] || 0;
-
-      card.innerHTML = `
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-white text-sm font-semibold">${m.nome || 'Sem nome'}</p>
-            ${m.whatsapp ? `<p class="text-xs" style="color:var(--lsr-text-muted)">${m.whatsapp}</p>` : ''}
-          </div>
-          <span class="text-xs px-2 py-1 rounded-full" style="color:${statusCor}">${statusTexto}</span>
-        </div>
-        <div class="flex items-center justify-between text-xs" style="color:var(--lsr-text-muted)">
-          <span>${totalTurnosMotorista} turno(s)</span>
-          <span style="color:${venc.cor}">${m.plano ? m.plano.charAt(0).toUpperCase() + m.plano.slice(1) + ' · ' : ''}${venc.texto}</span>
-        </div>
-        <div class="flex gap-2 mt-1">
-          <button class="btn-toggle-motorista btn-lsr btn-lsr-outline flex-1 text-xs" style="min-height:38px;" data-id="${m.id}">${m.is_ativo ? 'Bloquear' : 'Liberar'}</button>
-          <button class="btn-renovar-motorista btn-lsr btn-lsr-outline flex-1 text-xs" style="min-height:38px;">Renovar</button>
-          <button class="btn-resetar-senha-motorista btn-lsr btn-lsr-outline flex-1 text-xs" style="min-height:38px;">🔑 Senha</button>
-        </div>
-      `;
-
-      card.querySelector('.btn-toggle-motorista').addEventListener('click', async (e) => {
-        const btn = e.target;
-        btn.disabled = true;
-        try {
-          if (m.is_ativo) {
-            await Admin.bloquearMotorista(m.id);
-          } else {
-            await Admin.aprovarMotorista(m.id);
-          }
-          await carregarPainelAdmin();
-        } catch (err) {
-          console.error(err);
-          alert('Não foi possível atualizar. Verifique sua conexão.');
-          btn.disabled = false;
-        }
-      });
-
-      card.querySelector('.btn-renovar-motorista').addEventListener('click', () => {
-        abrirModalPlano(m.id, m.nome, m.plano_vencimento, 'Renovar');
-      });
-
-      card.querySelector('.btn-resetar-senha-motorista').addEventListener('click', () => {
-        abrirModalResetarSenha(m.id, m.nome);
-      });
-
-      containerTodos.appendChild(card);
-    });
+    renderizarListaMotoristas();
   } catch (err) {
     console.error('[App] Erro ao carregar painel admin:', err);
     alert('Não foi possível carregar o painel. Verifique sua conexão.');
   }
+}
+
+/**
+ * Renderiza a lista de motoristas como cards COMPACTOS (só nome + status),
+ * já filtrados pela busca e pelo toggle "só vencidos/vencendo". Clicar
+ * num card abre o modal de detalhe com tudo (WhatsApp, plano, ações).
+ * Usa o cache em memória — não refaz a consulta ao servidor.
+ */
+function renderizarListaMotoristas() {
+  const container = document.getElementById('admin-lista-motoristas');
+  const vazio = document.getElementById('admin-lista-motoristas-vazio');
+  container.innerHTML = '';
+
+  const textoBusca = filtroTextoMotorista.trim().toLowerCase();
+
+  const filtrados = motoristasCache.filter((m) => {
+    if (textoBusca && !(m.nome || '').toLowerCase().includes(textoBusca)) return false;
+    if (filtroApenasVencendo) {
+      const dias = diasAteVencimento(m.plano_vencimento);
+      if (dias === null || dias > diasAvisoCache) return false;
+    }
+    return true;
+  });
+
+  if (!filtrados.length) {
+    vazio.classList.remove('hidden');
+    return;
+  }
+  vazio.classList.add('hidden');
+
+  filtrados.forEach((m) => {
+    const dias = diasAteVencimento(m.plano_vencimento);
+    let corBorda = 'transparent';
+    if (dias !== null) {
+      if (dias < 0) corBorda = 'var(--lsr-red)';
+      else if (dias <= diasAvisoCache) corBorda = '#ffb74d';
+    }
+    const statusCor = m.is_ativo ? 'var(--lsr-green)' : 'var(--lsr-red)';
+    const statusTexto = m.is_ativo ? 'Ativo' : 'Bloqueado';
+
+    const card = document.createElement('div');
+    card.className = 'card-lsr p-3 flex items-center justify-between cursor-pointer';
+    card.style.borderLeft = `4px solid ${corBorda}`;
+    card.innerHTML = `
+      <div>
+        <p class="text-white text-sm font-semibold">${m.nome || 'Sem nome'}</p>
+        <p class="text-xs" style="color:${statusCor}">${statusTexto}</p>
+      </div>
+      <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
+    `;
+    card.addEventListener('click', () => abrirDetalheMotorista(m.id));
+    container.appendChild(card);
+  });
+}
+
+// ------------------------------------------------------------
+// Modal: detalhe do motorista (aberto ao clicar no card compacto)
+// ------------------------------------------------------------
+function abrirDetalheMotorista(motoristaId) {
+  const m = motoristasCache.find((x) => x.id === motoristaId);
+  if (!m) return;
+
+  motoristaEmContextoId = motoristaId;
+  const dias = diasAteVencimento(m.plano_vencimento);
+  const venc = formatarVencimento(m.plano_vencimento);
+  const totalTurnosMotorista = turnosPorMotoristaCache[m.id] || 0;
+
+  document.getElementById('detalhe-motorista-nome').textContent = m.nome || 'Sem nome';
+  document.getElementById('detalhe-motorista-whatsapp').textContent = m.whatsapp || '—';
+  document.getElementById('detalhe-motorista-status').textContent = m.is_ativo ? 'Ativo' : 'Bloqueado';
+  document.getElementById('detalhe-motorista-status').style.color = m.is_ativo ? 'var(--lsr-green)' : 'var(--lsr-red)';
+  document.getElementById('detalhe-motorista-plano').textContent = m.plano ? NOMES_PLANO[m.plano] || m.plano : 'Sem plano definido';
+  document.getElementById('detalhe-motorista-vencimento').textContent = venc.texto;
+  document.getElementById('detalhe-motorista-vencimento').style.color = venc.cor;
+  document.getElementById('detalhe-motorista-turnos').textContent = totalTurnosMotorista;
+
+  const btnWhats = document.getElementById('btn-detalhe-whatsapp');
+  btnWhats.style.display = m.whatsapp ? 'flex' : 'none';
+  btnWhats.onclick = () => abrirWhatsAppLembrete(m.whatsapp, m.nome, dias);
+
+  document.getElementById('btn-detalhe-renovar').onclick = () => {
+    fecharModalDetalheMotorista();
+    abrirModalPlano(m.id, m.nome, m.plano_vencimento, 'Renovar');
+  };
+
+  document.getElementById('btn-detalhe-senha').onclick = () => {
+    fecharModalDetalheMotorista();
+    abrirModalResetarSenha(m.id, m.nome);
+  };
+
+  const btnToggle = document.getElementById('btn-detalhe-toggle');
+  btnToggle.textContent = m.is_ativo ? 'Bloquear acesso' : 'Liberar acesso';
+  btnToggle.onclick = async () => {
+    btnToggle.disabled = true;
+    try {
+      if (m.is_ativo) {
+        await Admin.bloquearMotorista(m.id);
+      } else {
+        await Admin.aprovarMotorista(m.id);
+      }
+      fecharModalDetalheMotorista();
+      await carregarPainelAdmin();
+    } catch (err) {
+      console.error(err);
+      alert('Não foi possível atualizar. Verifique sua conexão.');
+      btnToggle.disabled = false;
+    }
+  };
+
+  document.getElementById('modal-detalhe-motorista').classList.remove('hidden');
+}
+
+function fecharModalDetalheMotorista() {
+  document.getElementById('modal-detalhe-motorista').classList.add('hidden');
+  motoristaEmContextoId = null;
 }
 
 // ------------------------------------------------------------
@@ -1240,6 +1350,28 @@ document.addEventListener('DOMContentLoaded', () => {
     usuarioAtual = null;
     perfilAtual = null;
     mostrarTela('tela-login');
+  });
+
+  document.getElementById('btn-fechar-detalhe-motorista').addEventListener('click', fecharModalDetalheMotorista);
+
+  document.getElementById('input-busca-motorista').addEventListener('input', (e) => {
+    filtroTextoMotorista = e.target.value;
+    renderizarListaMotoristas();
+  });
+
+  document.getElementById('btn-filtro-vencendo').addEventListener('click', () => {
+    filtroApenasVencendo = !filtroApenasVencendo;
+    const btn = document.getElementById('btn-filtro-vencendo');
+    if (filtroApenasVencendo) {
+      btn.style.backgroundColor = '#ffb74d';
+      btn.style.color = '#0a0a0a';
+      btn.style.borderColor = '#ffb74d';
+    } else {
+      btn.style.backgroundColor = 'transparent';
+      btn.style.color = 'var(--lsr-text-muted)';
+      btn.style.borderColor = 'var(--lsr-text-muted)';
+    }
+    renderizarListaMotoristas();
   });
 
   document.getElementById('btn-salvar-prazo-offline').addEventListener('click', async () => {

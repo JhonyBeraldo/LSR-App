@@ -93,9 +93,16 @@ const Admin = {
       const atual = new Date(vencimentoAtual + 'T00:00:00');
       if (atual > hoje) base = atual;
     }
-    const meses = { mensal: 1, trimestral: 3, semestral: 6, anual: 12 }[tipoPlano] || 1;
+
+    const diasPorPlano = { teste_7: 7, teste_15: 15 };
+    const mesesPorPlano = { mensal: 1, trimestral: 3, semestral: 6, anual: 12 };
+
     const novo = new Date(base);
-    novo.setMonth(novo.getMonth() + meses);
+    if (diasPorPlano[tipoPlano]) {
+      novo.setDate(novo.getDate() + diasPorPlano[tipoPlano]);
+    } else {
+      novo.setMonth(novo.getMonth() + (mesesPorPlano[tipoPlano] || 1));
+    }
     return novo.toISOString().slice(0, 10);
   },
 
