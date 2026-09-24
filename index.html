@@ -100,6 +100,36 @@
   </div>
 
   <!-- ============================================================ -->
+  <!-- TELA: TROCA OBRIGATÓRIA DE SENHA (após reset pelo master) -->
+  <!-- ============================================================ -->
+  <div id="tela-trocar-senha" class="tela hidden tela-cheia flex flex-col items-center justify-center px-6">
+    <div class="w-full max-w-sm">
+      <div class="flex flex-col items-center mb-8">
+        <img src="icons/icon-192.png" alt="LSR App" class="w-20 h-20 mb-3">
+        <h1 class="text-2xl font-bold text-white">Crie sua nova senha</h1>
+        <p class="text-sm text-center mt-2" style="color:var(--lsr-text-muted)">
+          Sua senha foi resetada pelo administrador. Por segurança, defina uma senha nova só sua antes de continuar.
+        </p>
+      </div>
+
+      <form id="form-trocar-senha" class="card-lsr p-6 flex flex-col gap-4">
+        <div>
+          <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">Nova senha</label>
+          <input type="password" id="trocar-senha-nova" required minlength="6" class="input-lsr w-full" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+        </div>
+        <div>
+          <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">Confirmar nova senha</label>
+          <input type="password" id="trocar-senha-confirmar" required minlength="6" class="input-lsr w-full" placeholder="Repita a senha" autocomplete="new-password">
+        </div>
+
+        <p id="erro-trocar-senha" class="hidden text-sm" style="color:var(--lsr-red)"></p>
+
+        <button type="submit" id="btn-trocar-senha" class="btn-lsr btn-lsr-primary w-full mt-2">Salvar nova senha</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
   <!-- TELA: AGUARDANDO APROVAÇÃO DO MASTER -->
   <!-- ============================================================ -->
   <div id="tela-aguardando-aprovacao" class="tela hidden tela-cheia flex flex-col items-center justify-center px-6">
