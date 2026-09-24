@@ -3,7 +3,7 @@
 // IMPORTANTE: sempre que publicar mudanças em arquivos estáticos,
 // incremente CACHE_VERSION para forçar atualização nos celulares.
 
-const CACHE_VERSION = 'lsr-v27';
+const CACHE_VERSION = 'lsr-v28';
 // Caminhos RELATIVOS (sem "/" na frente) — essencial para funcionar
 // em subpasta (ex: GitHub Pages de projeto: usuario.github.io/LSR-App/).
 const APP_SHELL = [
@@ -27,13 +27,25 @@ const APP_SHELL = [
   'https://unpkg.com/@supabase/supabase-js@2'
 ];
 
-// Instalação: cacheia o app shell
+// Instalação: cacheia o app shell.
+// IMPORTANTE: usamos fetch() com { cache: 'reload' } em vez de
+// cache.addAll() puro — isso força ignorar o cache HTTP normal do
+// navegador (que o GitHub Pages mantém por um tempo) e buscar o
+// arquivo de verdade na rede. Sem isso, era possível o Service Worker
+// "atualizar" e mesmo assim guardar uma cópia antiga, porque o
+// fetch() interno pegava uma resposta já cacheada pelo navegador.
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_VERSION).then((cache) => {
-      return cache.addAll(APP_SHELL).catch((err) => {
-        console.warn('[SW] Falha ao cachear algum recurso do app shell:', err);
-      });
+    caches.open(CACHE_VERSION).then(async (cache) => {
+      await Promise.all(
+        APP_SHELL.map((url) =>
+          fetch(url, { cache: 'reload' })
+            .then((resposta) => {
+              if (resposta.ok) return cache.put(url, resposta);
+            })
+            .catch((err) => console.warn('[SW] Falha ao cachear', url, err))
+        )
+      );
     })
   );
   self.skipWaiting();
