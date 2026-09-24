@@ -668,6 +668,19 @@ async function calcularRelatorio(userId, dataInicio, dataFim) {
   const despesasPeriodo = despesas.filter((d) => d.data_despesa >= dataInicio && d.data_despesa <= dataFim);
   const totalDespesasReais = despesasPeriodo.reduce((soma, d) => soma + Number(d.valor), 0);
 
+  // Busca também os veículos das despesas (podem ser diferentes dos veículos usados nos turnos do período)
+  const idsVeiculosDespesas = [...new Set(despesasPeriodo.map((d) => d.veiculo_id))].filter((id) => !veiculosMap[id]);
+  await Promise.all(idsVeiculosDespesas.map(async (id) => {
+    try { veiculosMap[id] = await Veiculos.obterPorId(id); } catch (e) { veiculosMap[id] = null; }
+  }));
+
+  const despesasDetalhe = despesasPeriodo.map((d) => ({
+    descricao: d.descricao || 'Despesa de manutenção',
+    veiculoNome: veiculosMap[d.veiculo_id] ? veiculosMap[d.veiculo_id].nome_modelo : 'Veículo',
+    data: d.data_despesa,
+    valor: Number(d.valor)
+  }));
+
   return {
     dataInicio,
     dataFim,
@@ -683,6 +696,7 @@ async function calcularRelatorio(userId, dataInicio, dataFim) {
     lucroMedioPorKm: distTotal > 0 ? lucroTotal / distTotal : null,
     totalDespesasReais,
     quantidadeDespesas: despesasPeriodo.length,
+    despesasDetalhe,
     // Saldo do Cofre relativo SÓ a este período (reservado no período − gasto real no período).
     // Não confundir com o card da home, que é o saldo acumulado desde sempre.
     saldoCofrePeriodo: (custoManutencao + custoDepreciacao) - totalDespesasReais
@@ -715,6 +729,18 @@ function exibirRelatorio(r) {
   document.getElementById('relatorio-lucro-medio-km').textContent = r.lucroMedioPorKm !== null ? formatarMoeda(r.lucroMedioPorKm) : '—';
   document.getElementById('relatorio-despesas-reais').textContent = formatarMoeda(r.totalDespesasReais);
   document.getElementById('relatorio-despesas-qtd').textContent = `${r.quantidadeDespesas} despesa(s) registrada(s) no período`;
+
+  const containerDespesas = document.getElementById('relatorio-lista-despesas');
+  containerDespesas.innerHTML = '';
+  r.despesasDetalhe.forEach((d) => {
+    const linha = document.createElement('div');
+    linha.className = 'flex justify-between text-xs';
+    linha.innerHTML = `
+      <span style="color:var(--lsr-text-muted)">${d.descricao} · ${d.veiculoNome} · ${formatarDataBR(d.data)}</span>
+      <span style="color:var(--lsr-red)">${formatarMoeda(d.valor)}</span>
+    `;
+    containerDespesas.appendChild(linha);
+  });
   const elSaldoCofre = document.getElementById('relatorio-saldo-cofre');
   elSaldoCofre.textContent = formatarMoeda(r.saldoCofrePeriodo);
   elSaldoCofre.style.color = r.saldoCofrePeriodo < 0 ? 'var(--lsr-red)' : '#ffb74d';
@@ -869,7 +895,19 @@ function baixarPdfRelatorio() {
   tituloSecao('Cofre de Manutenção (neste período)');
   linhaTabela('Reservado (manutenção + depreciação)', formatarMoeda(r.custoManutencao + r.custoDepreciacao));
   linhaTabela('Gasto real registrado', formatarMoeda(r.totalDespesasReais), COR_VERMELHA);
-  linhaTabela('Quantidade de despesas', r.quantidadeDespesas);
+
+  if (r.despesasDetalhe.length) {
+    doc.setFont(undefined, 'italic');
+    doc.setFontSize(8.5);
+    doc.setTextColor(120, 120, 120);
+    r.despesasDetalhe.forEach((d) => {
+      doc.text(`•  ${d.descricao} — ${d.veiculoNome} — ${formatarDataBR(d.data)}`, MARGEM + 6, y);
+      doc.text(formatarMoeda(d.valor), LARGURA_PAGINA - MARGEM - 3, y, { align: 'right' });
+      y += 6;
+    });
+    y += 3;
+  }
+
   linhaTabela(
     'Saldo do Cofre no período',
     formatarMoeda(r.saldoCofrePeriodo),
