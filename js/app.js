@@ -410,6 +410,9 @@ function calcularTurno(turno, veiculo) {
 // HOME: preço de combustível + estado do turno (ativo ou não)
 // ------------------------------------------------------------
 async function carregarEstadoHome() {
+  // Cofre de Manutenção: calcula em segundo plano, sem travar o resto da home
+  atualizarSaldoCofre();
+
   // Preço de combustível
   const precoAtual = perfilAtual?.preco_combustivel_atual;
   document.getElementById('preco-combustivel-display').textContent =
@@ -458,6 +461,41 @@ function abrirModalIndicarAmigo() {
 
 function fecharModalIndicarAmigo() {
   document.getElementById('modal-indicar-amigo').classList.add('hidden');
+}
+
+/**
+ * Soma manutenção + depreciação de TODOS os turnos fechados do motorista —
+ * o "Cofre de Manutenção": quanto já foi hipoteticamente reservado pro
+ * desgaste do veículo, ao longo de toda a história de turnos.
+ */
+async function atualizarSaldoCofre() {
+  try {
+    const turnos = await Turnos.listarHistorico(usuarioAtual.id, 100000);
+    const fechados = turnos.filter((t) => t.status === 'fechado');
+
+    const idsVeiculos = [...new Set(fechados.map((t) => t.veiculo_id))];
+    const veiculosMap = {};
+    await Promise.all(idsVeiculos.map(async (id) => {
+      try {
+        veiculosMap[id] = await Veiculos.obterPorId(id);
+      } catch (err) {
+        veiculosMap[id] = null;
+      }
+    }));
+
+    let total = 0;
+    fechados.forEach((t) => {
+      const v = veiculosMap[t.veiculo_id];
+      const dist = (t.km_final || 0) - (t.km_inicial || 0);
+      const taxaManutencao = v ? v.taxa_manutencao_km : 0;
+      const taxaDepreciacao = v ? v.taxa_depreciacao_km : 0;
+      total += dist * (taxaManutencao + taxaDepreciacao);
+    });
+
+    document.getElementById('saldo-cofre-manutencao').textContent = formatarMoeda(total);
+  } catch (err) {
+    console.error('[App] Erro ao calcular saldo do cofre de manutenção:', err);
+  }
 }
 
 function verificarTurnoEsquecido() {
