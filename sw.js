@@ -3,7 +3,7 @@
 // IMPORTANTE: sempre que publicar mudanças em arquivos estáticos,
 // incremente CACHE_VERSION para forçar atualização nos celulares.
 
-const CACHE_VERSION = 'lsr-v18';
+const CACHE_VERSION = 'lsr-v19';
 // Caminhos RELATIVOS (sem "/" na frente) — essencial para funcionar
 // em subpasta (ex: GitHub Pages de projeto: usuario.github.io/LSR-App/).
 const APP_SHELL = [
@@ -18,6 +18,7 @@ const APP_SHELL = [
   'js/veiculos.js',
   'js/turnos.js',
   'js/sync.js',
+  'js/admin.js',
   'icons/icon-192.png',
   'icons/icon-512.png',
   'icons/apple-touch-icon.png',

@@ -160,6 +160,64 @@
   </div>
 
   <!-- ============================================================ -->
+  <!-- TELA: PAINEL MASTER -->
+  <!-- ============================================================ -->
+  <div id="tela-admin" class="tela hidden tela-cheia flex flex-col">
+    <header class="flex items-center justify-between px-5 py-4">
+      <div class="flex items-center gap-2">
+        <img src="icons/icon-192.png" alt="LSR" class="w-8 h-8">
+        <div>
+          <span class="font-bold text-white block leading-tight">Painel Master</span>
+          <span id="admin-nome" class="text-xs leading-tight block" style="color:var(--lsr-text-muted)"></span>
+        </div>
+      </div>
+      <button id="btn-logout-admin" class="text-sm font-semibold" style="color:var(--lsr-red)">Sair</button>
+    </header>
+
+    <main class="flex-1 px-5 pb-6 overflow-y-auto flex flex-col gap-5">
+
+      <!-- Resumo -->
+      <div class="grid grid-cols-2 gap-3">
+        <div class="card-lsr p-4 text-center">
+          <p id="admin-total-motoristas" class="font-bold text-lg text-white">0</p>
+          <p class="text-xs" style="color:var(--lsr-text-muted)">Motoristas ativos</p>
+        </div>
+        <div class="card-lsr p-4 text-center">
+          <p id="admin-total-turnos" class="font-bold text-lg text-white">0</p>
+          <p class="text-xs" style="color:var(--lsr-text-muted)">Turnos no sistema</p>
+        </div>
+      </div>
+
+      <!-- Pendentes de aprovação -->
+      <div>
+        <h2 class="text-sm font-semibold mb-2" style="color:var(--lsr-text-muted)">⏳ Pendentes de aprovação</h2>
+        <div id="admin-lista-pendentes" class="flex flex-col gap-2"></div>
+        <p id="admin-pendentes-vazio" class="hidden text-sm text-center py-3" style="color:var(--lsr-text-muted)">Nenhum motorista aguardando aprovação.</p>
+      </div>
+
+      <!-- Todos os motoristas -->
+      <div>
+        <h2 class="text-sm font-semibold mb-2" style="color:var(--lsr-text-muted)">Todos os motoristas</h2>
+        <div id="admin-lista-motoristas" class="flex flex-col gap-2"></div>
+      </div>
+
+      <!-- Configuração: prazo de tolerância offline -->
+      <div class="card-lsr p-4">
+        <h2 class="text-sm font-semibold mb-1 text-white">Tolerância offline</h2>
+        <p class="text-xs mb-3" style="color:var(--lsr-text-muted)">
+          Quantos dias o app confia no último acesso aprovado, mesmo sem conexão pra confirmar de novo.
+        </p>
+        <div class="flex gap-2">
+          <input type="number" min="1" step="1" id="input-prazo-offline" class="input-lsr flex-1" placeholder="3">
+          <button id="btn-salvar-prazo-offline" class="btn-lsr btn-lsr-primary px-5">Salvar</button>
+        </div>
+        <p id="erro-prazo-offline" class="hidden text-sm mt-2" style="color:var(--lsr-red)"></p>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ============================================================ -->
   <!-- TELA: HISTÓRICO -->
   <!-- ============================================================ -->
   <div id="tela-historico" class="tela hidden tela-cheia flex flex-col">
@@ -466,6 +524,7 @@
   <script src="js/veiculos.js"></script>
   <script src="js/turnos.js"></script>
   <script src="js/sync.js"></script>
+  <script src="js/admin.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
