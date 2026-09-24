@@ -82,55 +82,49 @@ const Admin = {
   // ------------------------------------------------------------
 
   /**
-   * Calcula a nova data de vencimento. Se o plano atual ainda não
-   * venceu, soma a partir do vencimento atual (renovação antecipada
-   * não "perde" tempo já pago); senão, soma a partir de hoje.
+   * Calcula a nova data de vencimento a partir da duração (em dias) do
+   * plano. Se o plano atual ainda não venceu, soma a partir do
+   * vencimento atual (renovação antecipada não "perde" tempo já
+   * pago); senão, soma a partir de hoje.
    */
-  calcularNovoVencimento(vencimentoAtual, tipoPlano) {
+  calcularNovoVencimento(vencimentoAtual, diasDuracao) {
     const hoje = new Date();
     let base = hoje;
     if (vencimentoAtual) {
       const atual = new Date(vencimentoAtual + 'T00:00:00');
       if (atual > hoje) base = atual;
     }
-
-    const diasPorPlano = { teste_7: 7, teste_15: 15 };
-    const mesesPorPlano = { mensal: 1, trimestral: 3, semestral: 6, anual: 12 };
-
     const novo = new Date(base);
-    if (diasPorPlano[tipoPlano]) {
-      novo.setDate(novo.getDate() + diasPorPlano[tipoPlano]);
-    } else {
-      novo.setMonth(novo.getMonth() + (mesesPorPlano[tipoPlano] || 1));
-    }
+    novo.setDate(novo.getDate() + diasDuracao);
     return novo.toISOString().slice(0, 10);
   },
 
   /**
-   * Aprova (ou renova) um motorista com um plano específico — calcula
-   * a nova data de vencimento e "congela" o valor vigente da tabela de
-   * preços NESTE momento (não muda sozinho se o preço mudar depois;
-   * só na próxima renovação, que busca o valor atualizado de novo).
+   * Aprova (ou renova) um motorista com um plano específico (por id).
+   * Congela nome e valor do plano NESSE momento — não muda sozinho se
+   * o plano for editado ou apagado depois; só na próxima renovação,
+   * que busca os dados atualizados de novo.
    */
-  async aprovarComPlano(id, tipoPlano, vencimentoAtual) {
-    const novoVencimento = this.calcularNovoVencimento(vencimentoAtual, tipoPlano);
+  async aprovarComPlano(motoristaId, planoId, vencimentoAtual) {
+    const { data: plano, error: erroPlano } = await supabaseClient
+      .from('planos_precos')
+      .select('*')
+      .eq('id', planoId)
+      .single();
+    if (erroPlano) throw erroPlano;
 
-    let valorVigente = null;
-    try {
-      const { data } = await supabaseClient
-        .from('planos_precos')
-        .select('valor')
-        .eq('plano', tipoPlano)
-        .single();
-      valorVigente = data ? data.valor : null;
-    } catch (e) {
-      console.warn('[Admin] Não foi possível buscar o preço vigente do plano:', e);
-    }
+    const novoVencimento = this.calcularNovoVencimento(vencimentoAtual, plano.dias_duracao);
 
     const { data, error } = await supabaseClient
       .from('perfis')
-      .update({ is_ativo: true, plano: tipoPlano, plano_vencimento: novoVencimento, plano_valor: valorVigente })
-      .eq('id', id)
+      .update({
+        is_ativo: true,
+        plano_id: planoId,
+        plano_nome: plano.nome,
+        plano_valor: plano.valor,
+        plano_vencimento: novoVencimento
+      })
+      .eq('id', motoristaId)
       .select()
       .single();
     if (error) throw error;
@@ -138,24 +132,42 @@ const Admin = {
   },
 
   // ------------------------------------------------------------
-  // TABELA DE PREÇOS DOS PLANOS
+  // CADASTRO DE PLANOS (o master cria/edita livremente)
   // ------------------------------------------------------------
-  async listarPrecosPlanos() {
-    const { data, error } = await supabaseClient
-      .from('planos_precos')
-      .select('*');
+  async listarPlanos(incluirInativos) {
+    let query = supabaseClient.from('planos_precos').select('*').order('dias_duracao', { ascending: true });
+    if (!incluirInativos) query = query.eq('is_ativo', true);
+    const { data, error } = await query;
     if (error) throw error;
-
-    const mapa = {};
-    (data || []).forEach((p) => { mapa[p.plano] = p.valor; });
-    return mapa;
+    return data || [];
   },
 
-  async atualizarPrecoPlano(plano, valor) {
+  async criarPlano({ nome, diasDuracao, valor }) {
     const { data, error } = await supabaseClient
       .from('planos_precos')
-      .update({ valor })
-      .eq('plano', plano)
+      .insert({ nome, dias_duracao: diasDuracao, valor })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async atualizarPlano(id, { nome, diasDuracao, valor }) {
+    const { data, error } = await supabaseClient
+      .from('planos_precos')
+      .update({ nome, dias_duracao: diasDuracao, valor })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async alternarAtivoPlano(id, ativo) {
+    const { data, error } = await supabaseClient
+      .from('planos_precos')
+      .update({ is_ativo: ativo })
+      .eq('id', id)
       .select()
       .single();
     if (error) throw error;

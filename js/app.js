@@ -552,16 +552,7 @@ let turnosPorMotoristaCache = {};
 let diasAvisoCache = 3;
 let filtroTextoMotorista = '';
 let filtroApenasVencendo = false;
-let precosPlanosCache = {};
-
-const NOMES_PLANO = {
-  teste_7: 'Teste (7 dias)',
-  teste_15: 'Teste (15 dias)',
-  mensal: 'Mensal',
-  trimestral: 'Trimestral',
-  semestral: 'Semestral',
-  anual: 'Anual'
-};
+let planoEmEdicaoId = null; // usado no cadastro/edição de planos (tela de config)
 
 /**
  * Dias restantes até o vencimento (negativo = já venceu). null se sem plano.
@@ -617,28 +608,18 @@ function formatarVencimento(dataISO) {
 
 async function carregarPainelAdmin() {
   try {
-    const [motoristas, totalTurnos, prazoDias, turnosPorMotorista, diasAviso, precos] = await Promise.all([
+    const [motoristas, totalTurnos, turnosPorMotorista, diasAviso] = await Promise.all([
       Admin.listarMotoristas(),
       Admin.contarTurnosTotais(),
-      Admin.getPrazoOfflineDias(),
       Admin.contarTurnosPorMotorista(),
-      Admin.getDiasAvisoVencimento(),
-      Admin.listarPrecosPlanos()
+      Admin.getDiasAvisoVencimento()
     ]);
-    document.getElementById('input-dias-aviso').value = diasAviso;
-
-    precosPlanosCache = precos;
-    Object.keys(NOMES_PLANO).forEach((tipo) => {
-      const input = document.getElementById(`preco-${tipo}`);
-      if (input) input.value = precos[tipo] != null ? precos[tipo] : '';
-    });
 
     const ativos = motoristas.filter((m) => m.is_ativo);
     const pendentes = motoristas.filter((m) => !m.is_ativo);
 
     document.getElementById('admin-total-motoristas').textContent = ativos.length;
     document.getElementById('admin-total-turnos').textContent = totalTurnos;
-    document.getElementById('input-prazo-offline').value = prazoDias;
 
     motoristasCache = motoristas;
     turnosPorMotoristaCache = turnosPorMotorista;
@@ -746,7 +727,7 @@ function abrirDetalheMotorista(motoristaId) {
   document.getElementById('detalhe-motorista-whatsapp').textContent = m.whatsapp || '—';
   document.getElementById('detalhe-motorista-status').textContent = m.is_ativo ? 'Ativo' : 'Bloqueado';
   document.getElementById('detalhe-motorista-status').style.color = m.is_ativo ? 'var(--lsr-green)' : 'var(--lsr-red)';
-  const textoPlano = m.plano ? (NOMES_PLANO[m.plano] || m.plano) + (m.plano_valor ? ` · ${formatarMoeda(m.plano_valor)}` : '') : 'Sem plano definido';
+  const textoPlano = m.plano_nome ? m.plano_nome + (m.plano_valor ? ` · ${formatarMoeda(m.plano_valor)}` : '') : 'Sem plano definido';
   document.getElementById('detalhe-motorista-plano').textContent = textoPlano;
   document.getElementById('detalhe-motorista-vencimento').textContent = venc.texto;
   document.getElementById('detalhe-motorista-vencimento').style.color = venc.cor;
@@ -794,22 +775,133 @@ function fecharModalDetalheMotorista() {
 }
 
 // ------------------------------------------------------------
-// Modal: escolher plano (aprovar pendente ou renovar existente)
+// TELA DE CONFIGURAÇÕES (tolerância offline, aviso, planos)
 // ------------------------------------------------------------
-function abrirModalPlano(motoristaId, nomeMotorista, vencimentoAtual, tituloAcao) {
+async function carregarConfigAdmin() {
+  try {
+    const [prazoDias, diasAviso, planos] = await Promise.all([
+      Admin.getPrazoOfflineDias(),
+      Admin.getDiasAvisoVencimento(),
+      Admin.listarPlanos(true)
+    ]);
+    document.getElementById('input-prazo-offline').value = prazoDias;
+    document.getElementById('input-dias-aviso').value = diasAviso;
+
+    const container = document.getElementById('lista-planos-config');
+    const vazio = document.getElementById('planos-config-vazio');
+    container.innerHTML = '';
+
+    if (!planos.length) {
+      vazio.classList.remove('hidden');
+      return;
+    }
+    vazio.classList.add('hidden');
+
+    planos.forEach((p) => {
+      const card = document.createElement('div');
+      card.className = 'card-lsr p-3 flex items-center justify-between cursor-pointer';
+      card.style.opacity = p.is_ativo ? '1' : '0.5';
+      card.innerHTML = `
+        <div>
+          <p class="text-white text-sm font-semibold">${p.nome}</p>
+          <p class="text-xs" style="color:var(--lsr-text-muted)">${p.dias_duracao} dias · ${p.valor > 0 ? formatarMoeda(p.valor) : 'Grátis'}${!p.is_ativo ? ' · Inativo' : ''}</p>
+        </div>
+        <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
+      `;
+      card.addEventListener('click', () => abrirModalCadastrarPlano(p));
+      container.appendChild(card);
+    });
+  } catch (err) {
+    console.error('[App] Erro ao carregar configurações:', err);
+    alert('Não foi possível carregar as configurações. Verifique sua conexão.');
+  }
+}
+
+function abrirModalCadastrarPlano(planoExistente) {
+  esconderErro('erro-cadastrar-plano');
+  planoEmEdicaoId = planoExistente ? planoExistente.id : null;
+  document.getElementById('modal-cadastrar-plano-titulo').textContent = planoExistente ? 'Editar plano' : 'Novo plano';
+  document.getElementById('plano-cadastro-id').value = planoExistente ? planoExistente.id : '';
+  document.getElementById('plano-cadastro-nome').value = planoExistente ? planoExistente.nome : '';
+  document.getElementById('plano-cadastro-dias').value = planoExistente ? planoExistente.dias_duracao : '';
+  document.getElementById('plano-cadastro-valor').value = planoExistente ? planoExistente.valor : '';
+
+  const btnToggle = document.getElementById('btn-alternar-ativo-plano');
+  if (planoExistente) {
+    btnToggle.classList.remove('hidden');
+    btnToggle.textContent = planoExistente.is_ativo ? 'Desativar plano' : 'Ativar plano';
+    btnToggle.onclick = async () => {
+      btnToggle.disabled = true;
+      try {
+        await Admin.alternarAtivoPlano(planoExistente.id, !planoExistente.is_ativo);
+        fecharModalCadastrarPlano();
+        await carregarConfigAdmin();
+      } catch (err) {
+        console.error(err);
+        alert('Não foi possível atualizar. Verifique sua conexão.');
+        btnToggle.disabled = false;
+      }
+    };
+  } else {
+    btnToggle.classList.add('hidden');
+  }
+
+  document.getElementById('modal-cadastrar-plano').classList.remove('hidden');
+}
+
+function fecharModalCadastrarPlano() {
+  document.getElementById('modal-cadastrar-plano').classList.add('hidden');
+  planoEmEdicaoId = null;
+}
+
+// ------------------------------------------------------------
+// Modal: escolher plano (aprovar pendente ou renovar existente)
+// Busca os planos ATIVOS na hora, sempre atualizados.
+// ------------------------------------------------------------
+async function abrirModalPlano(motoristaId, nomeMotorista, vencimentoAtual, tituloAcao) {
   motoristaEmContextoId = motoristaId;
   document.getElementById('modal-plano-titulo').textContent = `${tituloAcao} motorista`;
   document.getElementById('modal-plano-motorista-nome').textContent = nomeMotorista || '';
   document.getElementById('modal-plano-motorista').dataset.vencimentoAtual = vencimentoAtual || '';
 
-  document.querySelectorAll('.btn-escolher-plano').forEach((btn) => {
-    const tipo = btn.dataset.plano;
-    const preco = precosPlanosCache[tipo];
-    const precoTexto = preco != null && preco > 0 ? ` — ${formatarMoeda(preco)}` : '';
-    btn.textContent = `${NOMES_PLANO[tipo]}${precoTexto}`;
-  });
-
+  const container = document.getElementById('lista-planos-selecao');
+  const vazio = document.getElementById('planos-selecao-vazio');
+  container.innerHTML = '<p class="text-sm text-center py-2" style="color:var(--lsr-text-muted)">Carregando...</p>';
   document.getElementById('modal-plano-motorista').classList.remove('hidden');
+
+  try {
+    const planos = await Admin.listarPlanos(false);
+    container.innerHTML = '';
+
+    if (!planos.length) {
+      vazio.classList.remove('hidden');
+      return;
+    }
+    vazio.classList.add('hidden');
+
+    planos.forEach((p) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn-lsr btn-lsr-outline w-full justify-between px-4';
+      btn.innerHTML = `<span>${p.nome}</span><span style="color:var(--lsr-text-muted)">${p.valor > 0 ? formatarMoeda(p.valor) : 'Grátis'} · ${p.dias_duracao}d</span>`;
+      btn.addEventListener('click', async () => {
+        container.querySelectorAll('button').forEach((b) => { b.disabled = true; });
+        try {
+          await Admin.aprovarComPlano(motoristaId, p.id, vencimentoAtual);
+          fecharModalPlano();
+          await carregarPainelAdmin();
+        } catch (err) {
+          console.error(err);
+          alert('Não foi possível salvar o plano. Verifique sua conexão.');
+          container.querySelectorAll('button').forEach((b) => { b.disabled = false; });
+        }
+      });
+      container.appendChild(btn);
+    });
+  } catch (err) {
+    console.error(err);
+    container.innerHTML = '<p class="text-sm text-center py-2" style="color:var(--lsr-red)">Erro ao carregar planos.</p>';
+  }
 }
 
 function fecharModalPlano() {
@@ -1378,6 +1470,62 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('btn-fechar-detalhe-motorista').addEventListener('click', fecharModalDetalheMotorista);
 
+  // Navegação pra tela de configurações
+  document.getElementById('btn-abrir-config-admin').addEventListener('click', () => {
+    mostrarTela('tela-config-admin');
+    carregarConfigAdmin();
+  });
+  document.getElementById('btn-voltar-admin-config').addEventListener('click', () => {
+    mostrarTela('tela-admin');
+  });
+
+  // Cadastro/edição de planos
+  document.getElementById('btn-novo-plano').addEventListener('click', () => {
+    abrirModalCadastrarPlano(null);
+  });
+  document.getElementById('btn-fechar-modal-plano-cadastro').addEventListener('click', fecharModalCadastrarPlano);
+
+  document.getElementById('form-cadastrar-plano').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    esconderErro('erro-cadastrar-plano');
+
+    const nome = document.getElementById('plano-cadastro-nome').value.trim();
+    const dias = parseInt(document.getElementById('plano-cadastro-dias').value, 10);
+    const valor = parseFloat(document.getElementById('plano-cadastro-valor').value);
+
+    if (!nome) {
+      mostrarErro('erro-cadastrar-plano', 'Digite um nome pro plano.');
+      return;
+    }
+    if (!dias || dias <= 0) {
+      mostrarErro('erro-cadastrar-plano', 'A duração precisa ser maior que zero.');
+      return;
+    }
+    if (isNaN(valor) || valor < 0) {
+      mostrarErro('erro-cadastrar-plano', 'Digite um valor válido.');
+      return;
+    }
+
+    const btn = e.target.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.textContent = 'Salvando...';
+    try {
+      if (planoEmEdicaoId) {
+        await Admin.atualizarPlano(planoEmEdicaoId, { nome, diasDuracao: dias, valor });
+      } else {
+        await Admin.criarPlano({ nome, diasDuracao: dias, valor });
+      }
+      fecharModalCadastrarPlano();
+      await carregarConfigAdmin();
+    } catch (err) {
+      mostrarErro('erro-cadastrar-plano', 'Não foi possível salvar. Verifique sua conexão.');
+      console.error(err);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Salvar plano';
+    }
+  });
+
   // Troca obrigatória de senha (após reset pelo master)
   document.getElementById('form-trocar-senha').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -1455,30 +1603,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  document.getElementById('btn-salvar-precos').addEventListener('click', async () => {
-    esconderErro('erro-precos');
-    const btn = document.getElementById('btn-salvar-precos');
-    btn.disabled = true;
-    btn.textContent = 'Salvando...';
-
-    try {
-      const tipos = Object.keys(NOMES_PLANO);
-      for (const tipo of tipos) {
-        const input = document.getElementById(`preco-${tipo}`);
-        const valor = parseFloat(input.value);
-        if (isNaN(valor) || valor < 0) continue; // ignora campos vazios/inválidos, não trava os outros
-        await Admin.atualizarPrecoPlano(tipo, valor);
-      }
-      precosPlanosCache = await Admin.listarPrecosPlanos();
-    } catch (err) {
-      mostrarErro('erro-precos', 'Não foi possível salvar. Verifique sua conexão.');
-      console.error(err);
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Salvar valores';
-    }
-  });
-
   document.getElementById('btn-salvar-dias-aviso').addEventListener('click', async () => {
     esconderErro('erro-dias-aviso');
     const dias = parseInt(document.getElementById('input-dias-aviso').value, 10);
@@ -1500,28 +1624,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Modal: escolher plano (aprovar/renovar)
+  // Modal: escolher plano (aprovar/renovar) — os botões são criados
+  // dinamicamente em abrirModalPlano(), cada um já com seu próprio listener.
   document.getElementById('btn-cancelar-plano').addEventListener('click', fecharModalPlano);
-  document.querySelectorAll('.btn-escolher-plano').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const tipoPlano = btn.dataset.plano;
-      const vencimentoAtual = document.getElementById('modal-plano-motorista').dataset.vencimentoAtual || null;
-      const id = motoristaEmContextoId;
-      if (!id) return;
-
-      document.querySelectorAll('.btn-escolher-plano').forEach((b) => { b.disabled = true; });
-      try {
-        await Admin.aprovarComPlano(id, tipoPlano, vencimentoAtual);
-        fecharModalPlano();
-        await carregarPainelAdmin();
-      } catch (err) {
-        console.error(err);
-        alert('Não foi possível salvar o plano. Verifique sua conexão.');
-      } finally {
-        document.querySelectorAll('.btn-escolher-plano').forEach((b) => { b.disabled = false; });
-      }
-    });
-  });
 
   // Modal: resetar senha
   document.getElementById('btn-cancelar-resetar-senha').addEventListener('click', fecharModalResetarSenha);
