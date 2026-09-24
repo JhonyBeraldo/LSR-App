@@ -193,6 +193,7 @@
         <button id="btn-encerrar-turno" class="btn-lsr btn-lsr-danger w-full">■ ENCERRAR TURNO</button>
       </div>
 
+      <button id="btn-indicar-amigo" class="btn-lsr btn-lsr-outline w-full max-w-sm">🎁 Indicar amigo</button>
       <button id="btn-ir-historico" class="btn-lsr btn-lsr-outline w-full max-w-sm">📋 Histórico</button>
       <button id="btn-ir-veiculos" class="btn-lsr btn-lsr-outline w-full max-w-sm">🚗 Meus Veículos</button>
       <button id="btn-logout" class="btn-lsr btn-lsr-outline w-full max-w-sm">Sair</button>
@@ -284,6 +285,33 @@
           <button id="btn-salvar-prazo-offline" class="btn-lsr btn-lsr-primary px-5">Salvar</button>
         </div>
         <p id="erro-prazo-offline" class="hidden text-sm mt-2" style="color:var(--lsr-red)"></p>
+      </div>
+
+      <!-- Programa de indicação -->
+      <div class="card-lsr p-4">
+        <h2 class="text-sm font-semibold mb-1 text-white">Programa de indicação</h2>
+        <p class="text-xs mb-3" style="color:var(--lsr-text-muted)">
+          Quando o indicado fecha um plano com duração mínima abaixo, o indicador ganha dias grátis automaticamente.
+        </p>
+        <div class="flex flex-col gap-2 mb-3">
+          <div class="flex items-center gap-2">
+            <span class="text-xs w-32 shrink-0" style="color:var(--lsr-text-muted)">Dias de bônus</span>
+            <input type="number" min="1" step="1" id="input-indicacao-dias-bonus" class="input-lsr flex-1" placeholder="30">
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs w-32 shrink-0" style="color:var(--lsr-text-muted)">Plano mínimo (dias)</span>
+            <input type="number" min="1" step="1" id="input-indicacao-dias-minimo" class="input-lsr flex-1" placeholder="30">
+          </div>
+        </div>
+        <button id="btn-salvar-config-indicacao" class="btn-lsr btn-lsr-primary w-full">Salvar</button>
+        <p id="erro-config-indicacao" class="hidden text-sm mt-2" style="color:var(--lsr-red)"></p>
+      </div>
+
+      <!-- Indicações recompensadas -->
+      <div>
+        <h2 class="text-sm font-semibold mb-2" style="color:var(--lsr-text-muted)">Indicações recompensadas</h2>
+        <div id="lista-indicacoes" class="flex flex-col gap-2"></div>
+        <p id="indicacoes-vazio" class="hidden text-sm text-center py-3" style="color:var(--lsr-text-muted)">Nenhuma indicação recompensada ainda.</p>
       </div>
 
       <!-- Aviso de vencimento -->
@@ -610,6 +638,27 @@
       <div class="flex flex-col gap-3">
         <button id="btn-esquecido-preencher" class="btn-lsr btn-lsr-primary w-full">Preencher dados de fechamento</button>
         <button id="btn-esquecido-descartar" class="btn-lsr btn-lsr-outline w-full">Descartar turno (cliquei sem querer)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- MODAL: INDICAR AMIGO -->
+  <!-- ============================================================ -->
+  <div id="modal-indicar-amigo" class="hidden fixed inset-0 z-50 flex items-center justify-center px-6" style="background-color: rgba(0,0,0,0.6);">
+    <div class="card-lsr w-full sm:max-w-sm p-6 text-center">
+      <div class="text-4xl mb-3">🎁</div>
+      <h2 class="text-lg font-bold text-white mb-2">Indique e ganhe</h2>
+      <p class="text-sm mb-4" style="color:var(--lsr-text-muted)">
+        Compartilhe seu link. Quando um amigo se cadastrar e fechar um plano por ele, você ganha dias grátis automaticamente.
+      </p>
+      <div class="input-lsr w-full flex items-center px-3 mb-4" style="min-height:48px;">
+        <span id="texto-link-indicacao" class="text-xs text-white break-all text-left flex-1"></span>
+      </div>
+      <div class="flex flex-col gap-2">
+        <button id="btn-compartilhar-indicacao" class="btn-lsr btn-lsr-primary w-full">Compartilhar link</button>
+        <button id="btn-copiar-indicacao" class="btn-lsr btn-lsr-outline w-full">Copiar link</button>
+        <button id="btn-fechar-indicar-amigo" class="btn-lsr btn-lsr-outline w-full">Fechar</button>
       </div>
     </div>
   </div>
