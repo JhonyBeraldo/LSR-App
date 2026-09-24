@@ -55,13 +55,17 @@ const Auth = {
     return data.user;
   },
 
-  async cadastrar(nomeUsuario, senha, whatsapp) {
+  async cadastrar(nomeUsuario, senha, whatsapp, indicadoPor) {
     const email = usuarioParaEmailSintetico(nomeUsuario);
     const { data, error } = await supabaseClient.auth.signUp({
       email,
       password: senha,
       options: {
-        data: { nome: nomeUsuario.trim(), whatsapp: (whatsapp || '').trim() }
+        data: {
+          nome: nomeUsuario.trim(),
+          whatsapp: (whatsapp || '').trim(),
+          indicado_por: indicadoPor || null
+        }
       }
     });
     if (error) throw error;

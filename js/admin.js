@@ -128,7 +128,107 @@ const Admin = {
       .select()
       .single();
     if (error) throw error;
+
+    // Programa de indicação: se esse motorista foi indicado por
+    // alguém e esse plano qualifica (dias >= mínimo configurado),
+    // recompensa o indicador automaticamente — só uma vez por indicado.
+    try {
+      await this._processarRecompensaIndicacao(data, plano);
+    } catch (e) {
+      console.warn('[Admin] Falha ao processar recompensa de indicação (não bloqueia a aprovação):', e);
+    }
+
     return data;
+  },
+
+  async _processarRecompensaIndicacao(motoristaAtualizado, plano) {
+    if (!motoristaAtualizado.indicado_por) return; // não foi indicado por ninguém
+
+    const diasMinimo = parseInt(await Auth.getConfig('indicacao_dias_minimo_plano'), 10) || 30;
+    if (plano.dias_duracao < diasMinimo) return; // plano curto demais, não qualifica
+
+    // Já foi recompensado antes por esse mesmo indicado? (bônus é único, não repete a cada renovação)
+    const { data: jaExiste, error: erroCheck } = await supabaseClient
+      .from('indicacoes_log')
+      .select('id')
+      .eq('indicado_id', motoristaAtualizado.id)
+      .limit(1);
+    if (erroCheck) throw erroCheck;
+    if (jaExiste && jaExiste.length) return;
+
+    const diasBonus = parseInt(await Auth.getConfig('indicacao_dias_bonus'), 10) || 30;
+
+    // Busca o vencimento atual do indicador pra somar o bônus corretamente
+    const { data: indicador, error: erroIndicador } = await supabaseClient
+      .from('perfis')
+      .select('id, plano_vencimento')
+      .eq('id', motoristaAtualizado.indicado_por)
+      .single();
+    if (erroIndicador) throw erroIndicador;
+
+    const novoVencimentoIndicador = this.calcularNovoVencimento(indicador.plano_vencimento, diasBonus);
+
+    const { error: erroUpdate } = await supabaseClient
+      .from('perfis')
+      .update({ plano_vencimento: novoVencimentoIndicador })
+      .eq('id', indicador.id);
+    if (erroUpdate) throw erroUpdate;
+
+    await supabaseClient.from('indicacoes_log').insert({
+      indicador_id: indicador.id,
+      indicado_id: motoristaAtualizado.id,
+      plano_nome: plano.nome,
+      dias_bonus_concedidos: diasBonus
+    });
+  },
+
+  // ------------------------------------------------------------
+  // PROGRAMA DE INDICAÇÃO — configurações e histórico
+  // ------------------------------------------------------------
+  async getConfigIndicacao() {
+    const [dias_bonus, dias_minimo] = await Promise.all([
+      Auth.getConfig('indicacao_dias_bonus'),
+      Auth.getConfig('indicacao_dias_minimo_plano')
+    ]);
+    return {
+      diasBonus: dias_bonus ? parseInt(dias_bonus, 10) : 30,
+      diasMinimo: dias_minimo ? parseInt(dias_minimo, 10) : 30
+    };
+  },
+
+  async atualizarConfigIndicacao(diasBonus, diasMinimo) {
+    await Promise.all([
+      Auth.atualizarConfig('indicacao_dias_bonus', diasBonus),
+      Auth.atualizarConfig('indicacao_dias_minimo_plano', diasMinimo)
+    ]);
+  },
+
+  async listarIndicacoesRecentes(limite) {
+    const { data, error } = await supabaseClient
+      .from('indicacoes_log')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limite || 20);
+    if (error) throw error;
+
+    const registros = data || [];
+    if (!registros.length) return [];
+
+    const ids = [...new Set(registros.flatMap((r) => [r.indicador_id, r.indicado_id]))];
+    const { data: perfis, error: erroPerfis } = await supabaseClient
+      .from('perfis')
+      .select('id, nome')
+      .in('id', ids);
+    if (erroPerfis) throw erroPerfis;
+
+    const nomesPorId = {};
+    (perfis || []).forEach((p) => { nomesPorId[p.id] = p.nome; });
+
+    return registros.map((r) => ({
+      ...r,
+      indicadorNome: nomesPorId[r.indicador_id] || 'Motorista',
+      indicadoNome: nomesPorId[r.indicado_id] || 'Motorista'
+    }));
   },
 
   // ------------------------------------------------------------

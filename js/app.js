@@ -15,6 +15,29 @@ if ('serviceWorker' in navigator) {
 }
 
 // ------------------------------------------------------------
+// Programa de indicação: captura o ?ref= da URL (se vier de um
+// link compartilhado) e guarda pra usar no cadastro.
+// ------------------------------------------------------------
+const REF_CACHE_KEY = 'lsr_ref_code';
+
+function capturarCodigoIndicacaoDaURL() {
+  const params = new URLSearchParams(window.location.search);
+  const ref = params.get('ref');
+  if (ref) {
+    try { localStorage.setItem(REF_CACHE_KEY, ref); } catch (e) {}
+    // Limpa o parâmetro da URL sem recarregar a página
+    params.delete('ref');
+    const novaUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+    window.history.replaceState({}, '', novaUrl);
+  }
+}
+capturarCodigoIndicacaoDaURL();
+
+function lerCodigoIndicacaoCache() {
+  try { return localStorage.getItem(REF_CACHE_KEY); } catch (e) { return null; }
+}
+
+// ------------------------------------------------------------
 // Indicador de conectividade + status de sincronização
 // ------------------------------------------------------------
 async function atualizarStatusConexao() {
@@ -421,6 +444,22 @@ async function carregarEstadoHome() {
   await atualizarAvisoVencimento();
 }
 
+// ------------------------------------------------------------
+// Indicar amigo
+// ------------------------------------------------------------
+function gerarLinkIndicacao() {
+  return `${window.location.origin}${window.location.pathname}?ref=${usuarioAtual.id}`;
+}
+
+function abrirModalIndicarAmigo() {
+  document.getElementById('texto-link-indicacao').textContent = gerarLinkIndicacao();
+  document.getElementById('modal-indicar-amigo').classList.remove('hidden');
+}
+
+function fecharModalIndicarAmigo() {
+  document.getElementById('modal-indicar-amigo').classList.add('hidden');
+}
+
 function verificarTurnoEsquecido() {
   if (!turnoAtivoAtual) return;
   const horasDesdeInicio = (Date.now() - new Date(turnoAtivoAtual.tempo_inicio).getTime()) / (1000 * 60 * 60);
@@ -779,13 +818,36 @@ function fecharModalDetalheMotorista() {
 // ------------------------------------------------------------
 async function carregarConfigAdmin() {
   try {
-    const [prazoDias, diasAviso, planos] = await Promise.all([
+    const [prazoDias, diasAviso, planos, configIndicacao, indicacoes] = await Promise.all([
       Admin.getPrazoOfflineDias(),
       Admin.getDiasAvisoVencimento(),
-      Admin.listarPlanos(true)
+      Admin.listarPlanos(true),
+      Admin.getConfigIndicacao(),
+      Admin.listarIndicacoesRecentes(20)
     ]);
     document.getElementById('input-prazo-offline').value = prazoDias;
     document.getElementById('input-dias-aviso').value = diasAviso;
+    document.getElementById('input-indicacao-dias-bonus').value = configIndicacao.diasBonus;
+    document.getElementById('input-indicacao-dias-minimo').value = configIndicacao.diasMinimo;
+
+    const containerIndicacoes = document.getElementById('lista-indicacoes');
+    const indicacoesVazio = document.getElementById('indicacoes-vazio');
+    containerIndicacoes.innerHTML = '';
+
+    if (!indicacoes.length) {
+      indicacoesVazio.classList.remove('hidden');
+    } else {
+      indicacoesVazio.classList.add('hidden');
+      indicacoes.forEach((r) => {
+        const item = document.createElement('div');
+        item.className = 'card-lsr p-3';
+        item.innerHTML = `
+          <p class="text-sm text-white"><strong>${r.indicadorNome}</strong> indicou <strong>${r.indicadoNome}</strong></p>
+          <p class="text-xs" style="color:var(--lsr-green)">+${r.dias_bonus_concedidos} dias de bônus · ${formatarDataBR(r.created_at.slice(0, 10))}</p>
+        `;
+        containerIndicacoes.appendChild(item);
+      });
+    }
 
     const container = document.getElementById('lista-planos-config');
     const vazio = document.getElementById('planos-config-vazio');
@@ -1179,7 +1241,8 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.disabled = true;
     btn.textContent = 'Criando conta...';
     try {
-      await Auth.cadastrar(nomeUsuario, senha, whatsapp);
+      await Auth.cadastrar(nomeUsuario, senha, whatsapp, lerCodigoIndicacaoCache());
+      try { localStorage.removeItem(REF_CACHE_KEY); } catch (e) {}
       mostrarErro('erro-cadastro', 'Conta criada! Aguarde a aprovação do administrador para poder entrar.');
       document.getElementById('erro-cadastro').style.color = 'var(--lsr-green)';
     } catch (err) {
@@ -1219,6 +1282,36 @@ document.addEventListener('DOMContentLoaded', () => {
   // Tela de aguardando aprovação -> voltar ao login
   document.getElementById('btn-voltar-login-aguardando').addEventListener('click', () => {
     mostrarTela('tela-login');
+  });
+
+  // Indicar amigo
+  document.getElementById('btn-indicar-amigo').addEventListener('click', abrirModalIndicarAmigo);
+  document.getElementById('btn-fechar-indicar-amigo').addEventListener('click', fecharModalIndicarAmigo);
+  document.getElementById('btn-copiar-indicacao').addEventListener('click', async () => {
+    const btn = document.getElementById('btn-copiar-indicacao');
+    try {
+      await navigator.clipboard.writeText(gerarLinkIndicacao());
+      const textoOriginal = btn.textContent;
+      btn.textContent = 'Copiado!';
+      setTimeout(() => { btn.textContent = textoOriginal; }, 2000);
+    } catch (e) {
+      alert('Não foi possível copiar. Selecione o link manualmente.');
+    }
+  });
+  document.getElementById('btn-compartilhar-indicacao').addEventListener('click', async () => {
+    const link = gerarLinkIndicacao();
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'LSR App', text: 'Baixa o LSR App pra controlar seu lucro real como motorista de app!', url: link });
+      } catch (e) { /* usuário cancelou o compartilhamento — tudo bem */ }
+    } else {
+      try {
+        await navigator.clipboard.writeText(link);
+        alert('Link copiado! Cole numa conversa pra compartilhar.');
+      } catch (e) {
+        alert('Não foi possível compartilhar. Selecione o link manualmente.');
+      }
+    }
   });
 
   // Navegação: Home <-> Veículos
@@ -1597,6 +1690,28 @@ document.addEventListener('DOMContentLoaded', () => {
       salvarPrazoCache(dias);
     } catch (err) {
       mostrarErro('erro-prazo-offline', 'Não foi possível salvar. Verifique sua conexão.');
+      console.error(err);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  document.getElementById('btn-salvar-config-indicacao').addEventListener('click', async () => {
+    esconderErro('erro-config-indicacao');
+    const diasBonus = parseInt(document.getElementById('input-indicacao-dias-bonus').value, 10);
+    const diasMinimo = parseInt(document.getElementById('input-indicacao-dias-minimo').value, 10);
+
+    if (!diasBonus || diasBonus <= 0 || !diasMinimo || diasMinimo <= 0) {
+      mostrarErro('erro-config-indicacao', 'Digite valores maiores que zero nos dois campos.');
+      return;
+    }
+
+    const btn = document.getElementById('btn-salvar-config-indicacao');
+    btn.disabled = true;
+    try {
+      await Admin.atualizarConfigIndicacao(diasBonus, diasMinimo);
+    } catch (err) {
+      mostrarErro('erro-config-indicacao', 'Não foi possível salvar. Verifique sua conexão.');
       console.error(err);
     } finally {
       btn.disabled = false;
