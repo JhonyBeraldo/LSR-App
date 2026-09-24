@@ -204,10 +204,36 @@
         <button id="btn-encerrar-turno" class="btn-lsr btn-lsr-danger w-full">■ ENCERRAR TURNO</button>
       </div>
 
-      <button id="btn-indicar-amigo" class="btn-lsr btn-lsr-outline w-full max-w-sm">🎁 Indicar amigo</button>
-      <button id="btn-ir-historico" class="btn-lsr btn-lsr-outline w-full max-w-sm">📋 Histórico</button>
-      <button id="btn-ir-veiculos" class="btn-lsr btn-lsr-outline w-full max-w-sm">🚗 Meus Veículos</button>
-      <button id="btn-logout" class="btn-lsr btn-lsr-outline w-full max-w-sm">Sair</button>
+      <button id="btn-abrir-config-motorista" class="btn-lsr btn-lsr-outline w-full max-w-sm">⚙️ Configurações</button>
+    </main>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- TELA: CONFIGURAÇÕES DO MOTORISTA -->
+  <!-- ============================================================ -->
+  <div id="tela-config-motorista" class="tela hidden tela-cheia flex flex-col">
+    <header class="flex items-center gap-3 px-5 py-4">
+      <button id="btn-voltar-home-config" class="text-2xl leading-none" style="color:var(--lsr-text-muted)">←</button>
+      <span class="font-bold text-white text-lg">Configurações</span>
+    </header>
+
+    <main class="flex-1 px-5 pb-6 overflow-y-auto flex flex-col gap-2">
+      <button id="btn-indicar-amigo" class="card-lsr p-4 flex items-center justify-between text-left">
+        <span class="text-white font-semibold">🎁 Indicar amigo</span>
+        <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
+      </button>
+      <button id="btn-ir-historico" class="card-lsr p-4 flex items-center justify-between text-left">
+        <span class="text-white font-semibold">📋 Histórico</span>
+        <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
+      </button>
+      <button id="btn-ir-veiculos" class="card-lsr p-4 flex items-center justify-between text-left">
+        <span class="text-white font-semibold">🚗 Meus Veículos</span>
+        <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
+      </button>
+      <button id="btn-logout" class="card-lsr p-4 flex items-center justify-between text-left mt-4">
+        <span class="font-semibold" style="color:var(--lsr-red)">Sair</span>
+        <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
+      </button>
     </main>
   </div>
 
