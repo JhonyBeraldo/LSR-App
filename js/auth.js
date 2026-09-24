@@ -116,6 +116,27 @@ const Auth = {
   },
 
   /**
+   * Troca a senha do usuário logado (usado tanto na troca obrigatória
+   * de senha temporária quanto numa futura tela de "alterar senha").
+   */
+  async atualizarSenhaPropria(novaSenha) {
+    const { error } = await supabaseClient.auth.updateUser({ password: novaSenha });
+    if (error) throw error;
+  },
+
+  /**
+   * Remove a marca de "senha temporária" depois que o usuário já
+   * definiu a senha nova dele.
+   */
+  async limparSenhaTemporaria(userId) {
+    const { error } = await supabaseClient
+      .from('perfis')
+      .update({ senha_temporaria: false })
+      .eq('id', userId);
+    if (error) throw error;
+  },
+
+  /**
    * Atualiza o preço de combustível atual do motorista (usado como
    * valor padrão sugerido ao encerrar um turno — mas é editável na hora).
    */

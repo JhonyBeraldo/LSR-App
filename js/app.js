@@ -161,6 +161,13 @@ async function verificarAcessoEDirecionar(usuario) {
     usuarioAtual = usuario;
     salvarSessaoCache(usuario, perfil);
 
+    // Senha temporária (definida pelo master via reset): obriga a
+    // trocar antes de liberar qualquer outra tela, seja motorista ou master.
+    if (perfil.senha_temporaria) {
+      mostrarTela('tela-trocar-senha');
+      return;
+    }
+
     // Atualiza o prazo de tolerância offline em cache (melhor esforço, não bloqueia)
     Auth.getConfig('prazo_aprovacao_offline_dias')
       .then((v) => { if (v) salvarPrazoCache(parseInt(v, 10)); })
@@ -1353,6 +1360,41 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   document.getElementById('btn-fechar-detalhe-motorista').addEventListener('click', fecharModalDetalheMotorista);
+
+  // Troca obrigatória de senha (após reset pelo master)
+  document.getElementById('form-trocar-senha').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    esconderErro('erro-trocar-senha');
+
+    const novaSenha = document.getElementById('trocar-senha-nova').value;
+    const confirmar = document.getElementById('trocar-senha-confirmar').value;
+
+    if (novaSenha.length < 6) {
+      mostrarErro('erro-trocar-senha', 'A senha precisa ter no mínimo 6 caracteres.');
+      return;
+    }
+    if (novaSenha !== confirmar) {
+      mostrarErro('erro-trocar-senha', 'As senhas não coincidem.');
+      return;
+    }
+
+    const btn = document.getElementById('btn-trocar-senha');
+    btn.disabled = true;
+    btn.textContent = 'Salvando...';
+    try {
+      await Auth.atualizarSenhaPropria(novaSenha);
+      await Auth.limparSenhaTemporaria(usuarioAtual.id);
+      perfilAtual.senha_temporaria = false;
+      // Continua o roteamento normal (home ou painel, conforme o role)
+      await verificarAcessoEDirecionar(usuarioAtual);
+    } catch (err) {
+      mostrarErro('erro-trocar-senha', 'Não foi possível salvar a nova senha. Verifique sua conexão.');
+      console.error(err);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Salvar nova senha';
+    }
+  });
 
   document.getElementById('input-busca-motorista').addEventListener('input', (e) => {
     filtroTextoMotorista = e.target.value;
