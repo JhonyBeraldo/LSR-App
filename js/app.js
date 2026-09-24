@@ -204,7 +204,7 @@ async function verificarAcessoEDirecionar(usuario) {
       return;
     }
 
-    document.getElementById('home-email').textContent = perfil.nome || 'Motorista';
+    document.getElementById('home-email').textContent = 'Bem-vindo, ' + (perfil.nome || 'Motorista');
     mostrarTela('tela-home');
     await carregarEstadoHome();
 
@@ -239,7 +239,7 @@ async function verificarAcessoEDirecionar(usuario) {
           return;
         }
 
-        document.getElementById('home-email').textContent = cache.nome || 'Motorista';
+        document.getElementById('home-email').textContent = 'Bem-vindo, ' + (cache.nome || 'Motorista');
         mostrarTela('tela-home');
         await carregarEstadoHome();
         return;
@@ -1521,6 +1521,14 @@ document.addEventListener('DOMContentLoaded', () => {
       btn.disabled = false;
       btn.textContent = despesaEmEdicaoId ? 'Salvar alterações' : 'Salvar despesa';
     }
+  });
+
+  // Navegação: Home <-> Configurações do motorista
+  document.getElementById('btn-abrir-config-motorista').addEventListener('click', () => {
+    mostrarTela('tela-config-motorista');
+  });
+  document.getElementById('btn-voltar-home-config').addEventListener('click', () => {
+    mostrarTela('tela-home');
   });
 
   // Indicar amigo
