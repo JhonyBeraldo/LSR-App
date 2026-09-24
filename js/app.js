@@ -616,6 +616,154 @@ async function abrirModalNovaDespesa(despesaExistente, veiculoDaDespesa) {
   }
 }
 
+// ------------------------------------------------------------
+// RELATÓRIO FINANCEIRO
+// ------------------------------------------------------------
+let ultimoRelatorioGerado = null; // guarda o resultado calculado, pra gerar o PDF sem recalcular
+
+function definirPeriodoPreset(periodo) {
+  const hoje = new Date();
+  let inicio;
+  const fim = hoje.toISOString().slice(0, 10);
+
+  if (periodo === '7dias') {
+    const d = new Date(hoje);
+    d.setDate(d.getDate() - 6);
+    inicio = d.toISOString().slice(0, 10);
+  } else if (periodo === 'mes') {
+    inicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().slice(0, 10);
+  } else if (periodo === 'ano') {
+    inicio = new Date(hoje.getFullYear(), 0, 1).toISOString().slice(0, 10);
+  }
+
+  document.getElementById('relatorio-data-inicio').value = inicio;
+  document.getElementById('relatorio-data-fim').value = fim;
+}
+
+async function calcularRelatorio(userId, dataInicio, dataFim) {
+  const [turnos, despesas] = await Promise.all([
+    Turnos.listarHistorico(userId, 100000),
+    Despesas.listar(userId)
+  ]);
+
+  const fechados = turnos.filter((t) => t.status === 'fechado' && t.data_turno >= dataInicio && t.data_turno <= dataFim);
+
+  const idsVeiculos = [...new Set(fechados.map((t) => t.veiculo_id))];
+  const veiculosMap = {};
+  await Promise.all(idsVeiculos.map(async (id) => {
+    try { veiculosMap[id] = await Veiculos.obterPorId(id); } catch (e) { veiculosMap[id] = null; }
+  }));
+
+  let faturamentoTotal = 0, custoCombustivel = 0, custoManutencao = 0, custoDepreciacao = 0, distTotal = 0, lucroTotal = 0;
+  fechados.forEach((t) => {
+    const r = calcularTurno(t, veiculosMap[t.veiculo_id]);
+    faturamentoTotal += Number(t.faturamento_bruto) || 0;
+    custoCombustivel += r.custoCombustivel;
+    custoManutencao += r.custoManutencao;
+    custoDepreciacao += r.custoDepreciacao;
+    distTotal += r.dist;
+    lucroTotal += r.lucro;
+  });
+
+  const despesasPeriodo = despesas.filter((d) => d.data_despesa >= dataInicio && d.data_despesa <= dataFim);
+  const totalDespesasReais = despesasPeriodo.reduce((soma, d) => soma + Number(d.valor), 0);
+
+  return {
+    dataInicio,
+    dataFim,
+    quantidadeTurnos: fechados.length,
+    distanciaTotal: distTotal,
+    faturamentoTotal,
+    custoCombustivel,
+    custoManutencao,
+    custoDepreciacao,
+    custoTotal: custoCombustivel + custoManutencao + custoDepreciacao,
+    lucroTotal,
+    lucroMedioPorTurno: fechados.length ? lucroTotal / fechados.length : 0,
+    lucroMedioPorKm: distTotal > 0 ? lucroTotal / distTotal : null,
+    totalDespesasReais,
+    quantidadeDespesas: despesasPeriodo.length
+  };
+}
+
+function exibirRelatorio(r) {
+  const resultado = document.getElementById('resultado-relatorio');
+  const vazio = document.getElementById('relatorio-vazio');
+
+  if (!r.quantidadeTurnos) {
+    resultado.classList.add('hidden');
+    vazio.classList.remove('hidden');
+    return;
+  }
+  vazio.classList.add('hidden');
+  resultado.classList.remove('hidden');
+
+  const corLucro = r.lucroTotal >= 0 ? 'var(--lsr-green)' : 'var(--lsr-red)';
+  document.getElementById('relatorio-lucro-liquido').textContent = formatarMoeda(r.lucroTotal);
+  document.getElementById('relatorio-lucro-liquido').style.color = corLucro;
+  document.getElementById('relatorio-qtd-turnos').textContent = r.quantidadeTurnos;
+  document.getElementById('relatorio-distancia').textContent = `${r.distanciaTotal.toFixed(1)} km`;
+  document.getElementById('relatorio-faturamento').textContent = formatarMoeda(r.faturamentoTotal);
+  document.getElementById('relatorio-custo-combustivel').textContent = formatarMoeda(r.custoCombustivel);
+  document.getElementById('relatorio-custo-manutencao').textContent = formatarMoeda(r.custoManutencao);
+  document.getElementById('relatorio-custo-depreciacao').textContent = formatarMoeda(r.custoDepreciacao);
+  document.getElementById('relatorio-custo-total').textContent = formatarMoeda(r.custoTotal);
+  document.getElementById('relatorio-lucro-medio-turno').textContent = formatarMoeda(r.lucroMedioPorTurno);
+  document.getElementById('relatorio-lucro-medio-km').textContent = r.lucroMedioPorKm !== null ? formatarMoeda(r.lucroMedioPorKm) : '—';
+  document.getElementById('relatorio-despesas-reais').textContent = formatarMoeda(r.totalDespesasReais);
+  document.getElementById('relatorio-despesas-qtd').textContent = `${r.quantidadeDespesas} despesa(s) registrada(s) no período`;
+}
+
+function baixarPdfRelatorio() {
+  if (!ultimoRelatorioGerado || !window.jspdf) {
+    alert('Gere o relatório antes de baixar o PDF.');
+    return;
+  }
+  const r = ultimoRelatorioGerado;
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  doc.setFontSize(16);
+  doc.text('Relatório Financeiro - LSR App', 14, 18);
+  doc.setFontSize(10);
+  doc.text(`Motorista: ${perfilAtual?.nome || ''}`, 14, 26);
+  doc.text(`Período: ${formatarDataBR(r.dataInicio)} a ${formatarDataBR(r.dataFim)}`, 14, 32);
+
+  let y = 44;
+  const linha = (rotulo, valor) => {
+    doc.setFont(undefined, 'normal');
+    doc.text(rotulo, 14, y);
+    doc.text(String(valor), 196, y, { align: 'right' });
+    y += 8;
+  };
+
+  linha('Turnos fechados', r.quantidadeTurnos);
+  linha('Distância total', `${r.distanciaTotal.toFixed(1)} km`);
+  linha('Faturamento bruto', formatarMoeda(r.faturamentoTotal));
+  linha('Custo combustível', formatarMoeda(r.custoCombustivel));
+  linha('Custo manutenção', formatarMoeda(r.custoManutencao));
+  linha('Custo depreciação', formatarMoeda(r.custoDepreciacao));
+  linha('Custo total operacional', formatarMoeda(r.custoTotal));
+
+  doc.setFont(undefined, 'bold');
+  doc.text('LUCRO LÍQUIDO', 14, y);
+  doc.text(formatarMoeda(r.lucroTotal), 196, y, { align: 'right' });
+  y += 12;
+  doc.setFont(undefined, 'normal');
+
+  linha('Lucro médio por turno', formatarMoeda(r.lucroMedioPorTurno));
+  linha('Lucro médio por km', r.lucroMedioPorKm !== null ? formatarMoeda(r.lucroMedioPorKm) : '—');
+  y += 4;
+  linha('Despesas reais de manutenção', formatarMoeda(r.totalDespesasReais));
+  linha('Qtd. de despesas no período', r.quantidadeDespesas);
+
+  doc.setFontSize(8);
+  doc.setTextColor(150);
+  doc.text('Desenvolvido por Jhony Beraldo', 14, 285);
+
+  doc.save(`relatorio-lsr-${r.dataInicio}-a-${r.dataFim}.pdf`);
+}
+
 function fecharModalNovaDespesa() {
   document.getElementById('modal-nova-despesa').classList.add('hidden');
   despesaEmEdicaoId = null;
@@ -768,6 +916,25 @@ function diasAteVencimento(dataISO) {
 /**
  * Abre o WhatsApp com uma mensagem de lembrete pré-preenchida.
  */
+const WHATSAPP_SUPORTE_PADRAO = '44984373004';
+
+/**
+ * Abre o WhatsApp de suporte (número configurável pelo master).
+ * Funciona mesmo na tela de login, sem estar autenticado.
+ */
+async function abrirWhatsAppSuporte() {
+  let numero = WHATSAPP_SUPORTE_PADRAO;
+  try {
+    const valor = await Auth.getConfig('whatsapp_suporte');
+    if (valor) numero = valor;
+  } catch (e) {
+    // Offline ou falha — usa o padrão mesmo, não trava o botão
+  }
+  numero = numero.replace(/\D/g, '');
+  if (numero.length <= 11) numero = '55' + numero;
+  window.open(`https://wa.me/${numero}`, '_blank');
+}
+
 function abrirWhatsAppLembrete(whatsapp, nome, dias) {
   let numero = (whatsapp || '').replace(/\D/g, '');
   if (!numero) return;
@@ -1023,6 +1190,15 @@ async function carregarConfigAviso() {
     document.getElementById('input-dias-aviso').value = await Admin.getDiasAvisoVencimento();
   } catch (err) {
     console.error('[App] Erro ao carregar aviso de vencimento:', err);
+  }
+}
+
+async function carregarConfigWhatsapp() {
+  try {
+    const valor = await Auth.getConfig('whatsapp_suporte');
+    document.getElementById('input-whatsapp-suporte').value = valor || WHATSAPP_SUPORTE_PADRAO;
+  } catch (err) {
+    console.error('[App] Erro ao carregar WhatsApp de suporte:', err);
   }
 }
 
@@ -1465,6 +1641,47 @@ document.addEventListener('DOMContentLoaded', () => {
     mostrarTela('tela-login');
   });
 
+  // Relatório Financeiro
+  document.getElementById('btn-ir-relatorio').addEventListener('click', () => {
+    mostrarTela('tela-relatorio');
+    definirPeriodoPreset('mes');
+    document.getElementById('resultado-relatorio').classList.add('hidden');
+    document.getElementById('relatorio-vazio').classList.add('hidden');
+  });
+  document.getElementById('btn-voltar-config-relatorio').addEventListener('click', () => {
+    mostrarTela('tela-config-motorista');
+  });
+
+  document.querySelectorAll('.btn-periodo-relatorio').forEach((btn) => {
+    btn.addEventListener('click', () => definirPeriodoPreset(btn.dataset.periodo));
+  });
+
+  document.getElementById('btn-gerar-relatorio').addEventListener('click', async () => {
+    const dataInicio = document.getElementById('relatorio-data-inicio').value;
+    const dataFim = document.getElementById('relatorio-data-fim').value;
+    if (!dataInicio || !dataFim) {
+      alert('Selecione o período (de/até).');
+      return;
+    }
+
+    const btn = document.getElementById('btn-gerar-relatorio');
+    btn.disabled = true;
+    btn.textContent = 'Gerando...';
+    try {
+      const r = await calcularRelatorio(usuarioAtual.id, dataInicio, dataFim);
+      ultimoRelatorioGerado = r;
+      exibirRelatorio(r);
+    } catch (err) {
+      console.error(err);
+      alert('Não foi possível gerar o relatório. Verifique sua conexão.');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Gerar relatório';
+    }
+  });
+
+  document.getElementById('btn-baixar-pdf-relatorio').addEventListener('click', baixarPdfRelatorio);
+
   // Despesas de manutenção
   document.getElementById('btn-ver-despesas').addEventListener('click', () => {
     mostrarTela('tela-despesas');
@@ -1522,6 +1739,10 @@ document.addEventListener('DOMContentLoaded', () => {
       btn.textContent = despesaEmEdicaoId ? 'Salvar alterações' : 'Salvar despesa';
     }
   });
+
+  // WhatsApp de suporte
+  document.getElementById('btn-whatsapp-suporte-login').addEventListener('click', abrirWhatsAppSuporte);
+  document.getElementById('btn-whatsapp-suporte-motorista').addEventListener('click', abrirWhatsAppSuporte);
 
   // Navegação: Home <-> Configurações do motorista
   document.getElementById('btn-abrir-config-motorista').addEventListener('click', () => {
@@ -1834,6 +2055,10 @@ document.addEventListener('DOMContentLoaded', () => {
     mostrarTela('tela-config-indicacao');
     carregarConfigIndicacao();
   });
+  document.getElementById('btn-menu-whatsapp-suporte').addEventListener('click', () => {
+    mostrarTela('tela-config-whatsapp');
+    carregarConfigWhatsapp();
+  });
 
   document.querySelectorAll('.btn-voltar-config-menu').forEach((btn) => {
     btn.addEventListener('click', () => mostrarTela('tela-config-admin'));
@@ -1979,6 +2204,27 @@ document.addEventListener('DOMContentLoaded', () => {
       await Admin.atualizarConfigIndicacao(diasBonus, diasMinimo);
     } catch (err) {
       mostrarErro('erro-config-indicacao', 'Não foi possível salvar. Verifique sua conexão.');
+      console.error(err);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  document.getElementById('btn-salvar-whatsapp-suporte').addEventListener('click', async () => {
+    esconderErro('erro-whatsapp-suporte');
+    const numero = document.getElementById('input-whatsapp-suporte').value.trim().replace(/\D/g, '');
+
+    if (numero.length < 10) {
+      mostrarErro('erro-whatsapp-suporte', 'Digite um número válido, com DDD.');
+      return;
+    }
+
+    const btn = document.getElementById('btn-salvar-whatsapp-suporte');
+    btn.disabled = true;
+    try {
+      await Auth.atualizarConfig('whatsapp_suporte', numero);
+    } catch (err) {
+      mostrarErro('erro-whatsapp-suporte', 'Não foi possível salvar. Verifique sua conexão.');
       console.error(err);
     } finally {
       btn.disabled = false;
