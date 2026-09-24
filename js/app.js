@@ -552,6 +552,7 @@ let turnosPorMotoristaCache = {};
 let diasAvisoCache = 3;
 let filtroTextoMotorista = '';
 let filtroApenasVencendo = false;
+let precosPlanosCache = {};
 
 const NOMES_PLANO = {
   teste_7: 'Teste (7 dias)',
@@ -616,14 +617,21 @@ function formatarVencimento(dataISO) {
 
 async function carregarPainelAdmin() {
   try {
-    const [motoristas, totalTurnos, prazoDias, turnosPorMotorista, diasAviso] = await Promise.all([
+    const [motoristas, totalTurnos, prazoDias, turnosPorMotorista, diasAviso, precos] = await Promise.all([
       Admin.listarMotoristas(),
       Admin.contarTurnosTotais(),
       Admin.getPrazoOfflineDias(),
       Admin.contarTurnosPorMotorista(),
-      Admin.getDiasAvisoVencimento()
+      Admin.getDiasAvisoVencimento(),
+      Admin.listarPrecosPlanos()
     ]);
     document.getElementById('input-dias-aviso').value = diasAviso;
+
+    precosPlanosCache = precos;
+    Object.keys(NOMES_PLANO).forEach((tipo) => {
+      const input = document.getElementById(`preco-${tipo}`);
+      if (input) input.value = precos[tipo] != null ? precos[tipo] : '';
+    });
 
     const ativos = motoristas.filter((m) => m.is_ativo);
     const pendentes = motoristas.filter((m) => !m.is_ativo);
@@ -738,7 +746,8 @@ function abrirDetalheMotorista(motoristaId) {
   document.getElementById('detalhe-motorista-whatsapp').textContent = m.whatsapp || '—';
   document.getElementById('detalhe-motorista-status').textContent = m.is_ativo ? 'Ativo' : 'Bloqueado';
   document.getElementById('detalhe-motorista-status').style.color = m.is_ativo ? 'var(--lsr-green)' : 'var(--lsr-red)';
-  document.getElementById('detalhe-motorista-plano').textContent = m.plano ? NOMES_PLANO[m.plano] || m.plano : 'Sem plano definido';
+  const textoPlano = m.plano ? (NOMES_PLANO[m.plano] || m.plano) + (m.plano_valor ? ` · ${formatarMoeda(m.plano_valor)}` : '') : 'Sem plano definido';
+  document.getElementById('detalhe-motorista-plano').textContent = textoPlano;
   document.getElementById('detalhe-motorista-vencimento').textContent = venc.texto;
   document.getElementById('detalhe-motorista-vencimento').style.color = venc.cor;
   document.getElementById('detalhe-motorista-turnos').textContent = totalTurnosMotorista;
@@ -792,6 +801,14 @@ function abrirModalPlano(motoristaId, nomeMotorista, vencimentoAtual, tituloAcao
   document.getElementById('modal-plano-titulo').textContent = `${tituloAcao} motorista`;
   document.getElementById('modal-plano-motorista-nome').textContent = nomeMotorista || '';
   document.getElementById('modal-plano-motorista').dataset.vencimentoAtual = vencimentoAtual || '';
+
+  document.querySelectorAll('.btn-escolher-plano').forEach((btn) => {
+    const tipo = btn.dataset.plano;
+    const preco = precosPlanosCache[tipo];
+    const precoTexto = preco != null && preco > 0 ? ` — ${formatarMoeda(preco)}` : '';
+    btn.textContent = `${NOMES_PLANO[tipo]}${precoTexto}`;
+  });
+
   document.getElementById('modal-plano-motorista').classList.remove('hidden');
 }
 
@@ -1435,6 +1452,30 @@ document.addEventListener('DOMContentLoaded', () => {
       console.error(err);
     } finally {
       btn.disabled = false;
+    }
+  });
+
+  document.getElementById('btn-salvar-precos').addEventListener('click', async () => {
+    esconderErro('erro-precos');
+    const btn = document.getElementById('btn-salvar-precos');
+    btn.disabled = true;
+    btn.textContent = 'Salvando...';
+
+    try {
+      const tipos = Object.keys(NOMES_PLANO);
+      for (const tipo of tipos) {
+        const input = document.getElementById(`preco-${tipo}`);
+        const valor = parseFloat(input.value);
+        if (isNaN(valor) || valor < 0) continue; // ignora campos vazios/inválidos, não trava os outros
+        await Admin.atualizarPrecoPlano(tipo, valor);
+      }
+      precosPlanosCache = await Admin.listarPrecosPlanos();
+    } catch (err) {
+      mostrarErro('erro-precos', 'Não foi possível salvar. Verifique sua conexão.');
+      console.error(err);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Salvar valores';
     }
   });
 
