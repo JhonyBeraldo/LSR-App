@@ -169,7 +169,11 @@
       <div class="card-lsr w-full max-w-sm p-4 text-center" style="border: 1px solid #ffb74d;">
         <p class="text-xs mb-1" style="color:var(--lsr-text-muted)">🔧 Cofre de Manutenção</p>
         <p id="saldo-cofre-manutencao" class="text-2xl font-bold" style="color:#ffb74d;">R$ --</p>
-        <p class="text-xs mt-1" style="color:var(--lsr-text-muted)">Total reservado em manutenção + depreciação</p>
+        <p class="text-xs mt-1 mb-3" style="color:var(--lsr-text-muted)">Total reservado em manutenção + depreciação</p>
+        <div class="flex gap-2">
+          <button id="btn-registrar-despesa" class="btn-lsr btn-lsr-outline flex-1 text-sm" style="min-height:40px;">💸 Registrar despesa</button>
+          <button id="btn-ver-despesas" class="btn-lsr btn-lsr-outline flex-1 text-sm" style="min-height:40px;">📋 Histórico</button>
+        </div>
       </div>
 
       <!-- Preço do combustível atual -->
@@ -493,6 +497,57 @@
           <button type="button" id="btn-cancelar-resetar-senha" class="btn-lsr btn-lsr-outline flex-1">Cancelar</button>
           <button type="submit" class="btn-lsr btn-lsr-primary flex-1">Resetar</button>
         </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- TELA: DESPESAS DE MANUTENÇÃO -->
+  <!-- ============================================================ -->
+  <div id="tela-despesas" class="tela hidden tela-cheia flex flex-col">
+    <header class="flex items-center gap-3 px-5 py-4">
+      <button id="btn-voltar-home-despesas" class="text-2xl leading-none" style="color:var(--lsr-text-muted)">←</button>
+      <span class="font-bold text-white text-lg">Despesas de Manutenção</span>
+    </header>
+
+    <main class="flex-1 px-5 pb-6 overflow-y-auto">
+      <button id="btn-nova-despesa" class="btn-lsr btn-lsr-primary w-full mb-4">+ Nova despesa</button>
+      <div id="lista-despesas" class="flex flex-col gap-2"></div>
+      <p id="despesas-vazio" class="hidden text-sm text-center py-4" style="color:var(--lsr-text-muted)">Nenhuma despesa registrada ainda.</p>
+    </main>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- MODAL: NOVA DESPESA DE MANUTENÇÃO -->
+  <!-- ============================================================ -->
+  <div id="modal-nova-despesa" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center" style="background-color: rgba(0,0,0,0.6);">
+    <div class="card-lsr w-full sm:max-w-sm p-6" style="border-radius: 20px 20px 0 0;">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-bold text-white">Nova despesa</h2>
+        <button id="btn-fechar-modal-despesa" class="text-2xl leading-none" style="color:var(--lsr-text-muted)">×</button>
+      </div>
+
+      <form id="form-nova-despesa" class="flex flex-col gap-4">
+        <div>
+          <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">Veículo</label>
+          <select id="select-veiculo-despesa" required class="input-lsr w-full"></select>
+        </div>
+        <div>
+          <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">Valor (R$)</label>
+          <input type="number" min="0.01" step="0.01" id="input-valor-despesa" required class="input-lsr w-full" placeholder="0,00">
+        </div>
+        <div>
+          <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">Descrição</label>
+          <input type="text" id="input-descricao-despesa" class="input-lsr w-full" placeholder="Ex: Troca de óleo, pneu traseiro...">
+        </div>
+        <div>
+          <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">Data</label>
+          <input type="date" id="input-data-despesa" required class="input-lsr w-full">
+        </div>
+
+        <p id="erro-nova-despesa" class="hidden text-sm" style="color:var(--lsr-red)"></p>
+
+        <button type="submit" class="btn-lsr btn-lsr-primary w-full mt-2">Salvar despesa</button>
       </form>
     </div>
   </div>
@@ -824,6 +879,7 @@
   <script src="js/auth.js"></script>
   <script src="js/veiculos.js"></script>
   <script src="js/turnos.js"></script>
+  <script src="js/despesas.js"></script>
   <script src="js/sync.js"></script>
   <script src="js/admin.js"></script>
   <script src="js/app.js"></script>
