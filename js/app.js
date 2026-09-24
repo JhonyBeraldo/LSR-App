@@ -470,7 +470,10 @@ function fecharModalIndicarAmigo() {
  */
 async function atualizarSaldoCofre() {
   try {
-    const turnos = await Turnos.listarHistorico(usuarioAtual.id, 100000);
+    const [turnos, despesas] = await Promise.all([
+      Turnos.listarHistorico(usuarioAtual.id, 100000),
+      Despesas.listar(usuarioAtual.id)
+    ]);
     const fechados = turnos.filter((t) => t.status === 'fechado');
 
     const idsVeiculos = [...new Set(fechados.map((t) => t.veiculo_id))];
@@ -483,19 +486,139 @@ async function atualizarSaldoCofre() {
       }
     }));
 
-    let total = 0;
+    let acumulado = 0;
     fechados.forEach((t) => {
       const v = veiculosMap[t.veiculo_id];
       const dist = (t.km_final || 0) - (t.km_inicial || 0);
       const taxaManutencao = v ? v.taxa_manutencao_km : 0;
       const taxaDepreciacao = v ? v.taxa_depreciacao_km : 0;
-      total += dist * (taxaManutencao + taxaDepreciacao);
+      acumulado += dist * (taxaManutencao + taxaDepreciacao);
     });
 
-    document.getElementById('saldo-cofre-manutencao').textContent = formatarMoeda(total);
+    const totalGasto = despesas.reduce((soma, d) => soma + Number(d.valor), 0);
+    const saldo = acumulado - totalGasto;
+
+    const elSaldo = document.getElementById('saldo-cofre-manutencao');
+    elSaldo.textContent = formatarMoeda(saldo);
+    elSaldo.style.color = saldo < 0 ? 'var(--lsr-red)' : '#ffb74d';
   } catch (err) {
     console.error('[App] Erro ao calcular saldo do cofre de manutenção:', err);
   }
+}
+
+// ------------------------------------------------------------
+// Despesas de manutenção (histórico + cadastro)
+// ------------------------------------------------------------
+async function carregarDespesas() {
+  const container = document.getElementById('lista-despesas');
+  const vazio = document.getElementById('despesas-vazio');
+  container.innerHTML = '<p class="text-sm text-center py-4" style="color:var(--lsr-text-muted)">Carregando...</p>';
+
+  try {
+    const despesas = await Despesas.listar(usuarioAtual.id);
+    container.innerHTML = '';
+
+    if (!despesas.length) {
+      vazio.classList.remove('hidden');
+      return;
+    }
+    vazio.classList.add('hidden');
+
+    const idsVeiculos = [...new Set(despesas.map((d) => d.veiculo_id))];
+    const veiculosMap = {};
+    await Promise.all(idsVeiculos.map(async (id) => {
+      try { veiculosMap[id] = await Veiculos.obterPorId(id); } catch (e) { veiculosMap[id] = null; }
+    }));
+
+    despesas.forEach((d) => {
+      const v = veiculosMap[d.veiculo_id];
+      const item = document.createElement('div');
+      item.className = 'card-lsr p-3 flex items-center justify-between';
+      item.innerHTML = `
+        <div>
+          <p class="text-white text-sm font-semibold">${d.descricao || 'Despesa de manutenção'}</p>
+          <p class="text-xs" style="color:var(--lsr-text-muted)">${v ? v.nome_modelo : 'Veículo'} · ${formatarDataBR(d.data_despesa)}</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="font-bold" style="color:var(--lsr-red)">${formatarMoeda(d.valor)}</span>
+          <button class="btn-editar-despesa text-lg" style="color:var(--lsr-text-muted)">✏️</button>
+          <button class="btn-excluir-despesa text-lg" style="color:var(--lsr-text-muted)" data-id="${d.id}">🗑️</button>
+        </div>
+      `;
+      item.querySelector('.btn-editar-despesa').addEventListener('click', () => {
+        abrirModalNovaDespesa(d, v);
+      });
+      item.querySelector('.btn-excluir-despesa').addEventListener('click', async () => {
+        if (!confirm('Excluir essa despesa?')) return;
+        try {
+          await Despesas.excluir(d.id);
+          await carregarDespesas();
+          await atualizarSaldoCofre();
+        } catch (err) {
+          console.error(err);
+          alert('Não foi possível excluir. Verifique sua conexão.');
+        }
+      });
+      container.appendChild(item);
+    });
+  } catch (err) {
+    console.error(err);
+    container.innerHTML = '<p class="text-sm text-center py-4" style="color:var(--lsr-red)">Erro ao carregar despesas.</p>';
+  }
+}
+
+let despesaEmEdicaoId = null;
+
+/**
+ * Abre o modal pra criar uma despesa nova, ou (se despesaExistente for
+ * passada) pra editar uma já cadastrada — mesmo formulário nos dois casos.
+ */
+async function abrirModalNovaDespesa(despesaExistente, veiculoDaDespesa) {
+  esconderErro('erro-nova-despesa');
+  despesaEmEdicaoId = despesaExistente ? despesaExistente.id : null;
+
+  document.getElementById('modal-nova-despesa').querySelector('h2').textContent =
+    despesaExistente ? 'Editar despesa' : 'Nova despesa';
+  document.querySelector('#form-nova-despesa button[type="submit"]').textContent =
+    despesaExistente ? 'Salvar alterações' : 'Salvar despesa';
+
+  document.getElementById('input-valor-despesa').value = despesaExistente ? despesaExistente.valor : '';
+  document.getElementById('input-descricao-despesa').value = despesaExistente ? (despesaExistente.descricao || '') : '';
+  document.getElementById('input-data-despesa').value = despesaExistente ? despesaExistente.data_despesa : new Date().toISOString().slice(0, 10);
+
+  const select = document.getElementById('select-veiculo-despesa');
+  select.innerHTML = '<option value="">Carregando...</option>';
+  document.getElementById('modal-nova-despesa').classList.remove('hidden');
+
+  try {
+    // Ao editar, inclui o veículo atual mesmo que já tenha sido desativado
+    // desde então — senão a edição "perderia" o veículo original.
+    let veiculosParaListar = await Veiculos.listarAtivos(usuarioAtual.id);
+    if (despesaExistente && veiculoDaDespesa && !veiculosParaListar.some((v) => v.id === veiculoDaDespesa.id)) {
+      veiculosParaListar = [veiculoDaDespesa, ...veiculosParaListar];
+    }
+
+    select.innerHTML = '';
+    if (!veiculosParaListar.length) {
+      select.innerHTML = '<option value="">Nenhum veículo cadastrado</option>';
+      return;
+    }
+    veiculosParaListar.forEach((v) => {
+      const opt = document.createElement('option');
+      opt.value = v.id;
+      opt.textContent = `${iconeTipoVeiculo(v.tipo)} ${v.nome_modelo}`;
+      select.appendChild(opt);
+    });
+
+    if (despesaExistente) select.value = despesaExistente.veiculo_id;
+  } catch (err) {
+    select.innerHTML = '<option value="">Erro ao carregar veículos</option>';
+  }
+}
+
+function fecharModalNovaDespesa() {
+  document.getElementById('modal-nova-despesa').classList.add('hidden');
+  despesaEmEdicaoId = null;
 }
 
 function verificarTurnoEsquecido() {
@@ -1340,6 +1463,64 @@ document.addEventListener('DOMContentLoaded', () => {
   // Tela de aguardando aprovação -> voltar ao login
   document.getElementById('btn-voltar-login-aguardando').addEventListener('click', () => {
     mostrarTela('tela-login');
+  });
+
+  // Despesas de manutenção
+  document.getElementById('btn-ver-despesas').addEventListener('click', () => {
+    mostrarTela('tela-despesas');
+    carregarDespesas();
+  });
+  document.getElementById('btn-voltar-home-despesas').addEventListener('click', () => {
+    mostrarTela('tela-home');
+  });
+  document.getElementById('btn-registrar-despesa').addEventListener('click', abrirModalNovaDespesa);
+  document.getElementById('btn-nova-despesa').addEventListener('click', abrirModalNovaDespesa);
+  document.getElementById('btn-fechar-modal-despesa').addEventListener('click', fecharModalNovaDespesa);
+
+  document.getElementById('form-nova-despesa').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    esconderErro('erro-nova-despesa');
+
+    const veiculoId = document.getElementById('select-veiculo-despesa').value;
+    const valor = parseFloat(document.getElementById('input-valor-despesa').value);
+    const descricao = document.getElementById('input-descricao-despesa').value.trim();
+    const dataDespesa = document.getElementById('input-data-despesa').value;
+
+    if (!veiculoId) {
+      mostrarErro('erro-nova-despesa', 'Selecione um veículo.');
+      return;
+    }
+    if (!valor || valor <= 0) {
+      mostrarErro('erro-nova-despesa', 'Digite um valor válido.');
+      return;
+    }
+    if (!dataDespesa) {
+      mostrarErro('erro-nova-despesa', 'Selecione uma data.');
+      return;
+    }
+
+    const btn = e.target.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.textContent = 'Salvando...';
+    try {
+      if (despesaEmEdicaoId) {
+        await Despesas.atualizar(despesaEmEdicaoId, { veiculoId, valor, descricao, dataDespesa });
+      } else {
+        await Despesas.registrar({ userId: usuarioAtual.id, veiculoId, valor, descricao, dataDespesa });
+      }
+      fecharModalNovaDespesa();
+      await atualizarSaldoCofre();
+      // Se a tela de despesas estiver visível, atualiza a lista também
+      if (!document.getElementById('tela-despesas').classList.contains('hidden')) {
+        await carregarDespesas();
+      }
+    } catch (err) {
+      mostrarErro('erro-nova-despesa', 'Não foi possível salvar. Verifique sua conexão.');
+      console.error(err);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = despesaEmEdicaoId ? 'Salvar alterações' : 'Salvar despesa';
+    }
   });
 
   // Indicar amigo
