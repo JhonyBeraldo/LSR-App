@@ -77,6 +77,11 @@
           <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">Usuário</label>
           <input type="text" id="cadastro-usuario" name="lsr-cadastro-usuario-field" required minlength="3" class="input-lsr w-full" placeholder="usuario" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
         </div>
+
+        <div>
+          <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">WhatsApp</label>
+          <input type="tel" id="cadastro-whatsapp" name="lsr-cadastro-whatsapp-field" required class="input-lsr w-full" placeholder="(44) 99999-9999" autocomplete="off">
+        </div>
         <div>
           <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">Senha</label>
           <input type="password" id="cadastro-senha" name="lsr-cadastro-senha-field" required class="input-lsr w-full" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
@@ -124,6 +129,11 @@
     </header>
 
     <main class="flex-1 flex flex-col items-center px-6 gap-4 py-4 overflow-y-auto">
+
+      <!-- Aviso de vencimento do plano (informativo — nunca bloqueia) -->
+      <div id="aviso-vencimento" class="hidden w-full max-w-sm card-lsr p-4" style="border-left: 4px solid #ffb74d;">
+        <p id="aviso-vencimento-texto" class="text-sm text-white"></p>
+      </div>
 
       <!-- Preço do combustível atual -->
       <div class="card-lsr w-full max-w-sm p-4 flex items-center justify-between">
@@ -214,7 +224,61 @@
         <p id="erro-prazo-offline" class="hidden text-sm mt-2" style="color:var(--lsr-red)"></p>
       </div>
 
+      <!-- Configuração: aviso de vencimento do plano -->
+      <div class="card-lsr p-4">
+        <h2 class="text-sm font-semibold mb-1 text-white">Aviso de vencimento</h2>
+        <p class="text-xs mb-3" style="color:var(--lsr-text-muted)">
+          Quantos dias antes do vencimento o motorista recebe o aviso no app pra renovar. Isso não bloqueia o acesso — só avisa.
+        </p>
+        <div class="flex gap-2">
+          <input type="number" min="1" step="1" id="input-dias-aviso" class="input-lsr flex-1" placeholder="3">
+          <button id="btn-salvar-dias-aviso" class="btn-lsr btn-lsr-primary px-5">Salvar</button>
+        </div>
+        <p id="erro-dias-aviso" class="hidden text-sm mt-2" style="color:var(--lsr-red)"></p>
+      </div>
+
     </main>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- MODAL: ESCOLHER PLANO (aprovar ou renovar motorista) -->
+  <!-- ============================================================ -->
+  <div id="modal-plano-motorista" class="hidden fixed inset-0 z-50 flex items-center justify-center px-6" style="background-color: rgba(0,0,0,0.6);">
+    <div class="card-lsr w-full sm:max-w-sm p-6">
+      <h2 id="modal-plano-titulo" class="text-lg font-bold text-white mb-1">Escolher plano</h2>
+      <p id="modal-plano-motorista-nome" class="text-sm mb-4" style="color:var(--lsr-text-muted)"></p>
+
+      <div class="grid grid-cols-2 gap-3 mb-3">
+        <button class="btn-lsr btn-lsr-outline btn-escolher-plano" data-plano="mensal">Mensal</button>
+        <button class="btn-lsr btn-lsr-outline btn-escolher-plano" data-plano="trimestral">Trimestral</button>
+        <button class="btn-lsr btn-lsr-outline btn-escolher-plano" data-plano="semestral">Semestral</button>
+        <button class="btn-lsr btn-lsr-outline btn-escolher-plano" data-plano="anual">Anual</button>
+      </div>
+
+      <button id="btn-cancelar-plano" class="btn-lsr btn-lsr-outline w-full">Cancelar</button>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- MODAL: RESETAR SENHA DO MOTORISTA -->
+  <!-- ============================================================ -->
+  <div id="modal-resetar-senha" class="hidden fixed inset-0 z-50 flex items-center justify-center px-6" style="background-color: rgba(0,0,0,0.6);">
+    <div class="card-lsr w-full sm:max-w-sm p-6">
+      <h2 class="text-lg font-bold text-white mb-1">Resetar senha</h2>
+      <p id="modal-resetar-senha-nome" class="text-sm mb-4" style="color:var(--lsr-text-muted)"></p>
+
+      <form id="form-resetar-senha" class="flex flex-col gap-4">
+        <div>
+          <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">Nova senha</label>
+          <input type="password" id="input-nova-senha" required minlength="6" class="input-lsr w-full" placeholder="Mínimo 6 caracteres">
+        </div>
+        <p id="erro-resetar-senha" class="hidden text-sm" style="color:var(--lsr-red)"></p>
+        <div class="flex gap-3">
+          <button type="button" id="btn-cancelar-resetar-senha" class="btn-lsr btn-lsr-outline flex-1">Cancelar</button>
+          <button type="submit" class="btn-lsr btn-lsr-primary flex-1">Resetar</button>
+        </div>
+      </form>
+    </div>
   </div>
 
   <!-- ============================================================ -->
