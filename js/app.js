@@ -682,7 +682,10 @@ async function calcularRelatorio(userId, dataInicio, dataFim) {
     lucroMedioPorTurno: fechados.length ? lucroTotal / fechados.length : 0,
     lucroMedioPorKm: distTotal > 0 ? lucroTotal / distTotal : null,
     totalDespesasReais,
-    quantidadeDespesas: despesasPeriodo.length
+    quantidadeDespesas: despesasPeriodo.length,
+    // Saldo do Cofre relativo SÓ a este período (reservado no período − gasto real no período).
+    // Não confundir com o card da home, que é o saldo acumulado desde sempre.
+    saldoCofrePeriodo: (custoManutencao + custoDepreciacao) - totalDespesasReais
   };
 }
 
@@ -712,6 +715,9 @@ function exibirRelatorio(r) {
   document.getElementById('relatorio-lucro-medio-km').textContent = r.lucroMedioPorKm !== null ? formatarMoeda(r.lucroMedioPorKm) : '—';
   document.getElementById('relatorio-despesas-reais').textContent = formatarMoeda(r.totalDespesasReais);
   document.getElementById('relatorio-despesas-qtd').textContent = `${r.quantidadeDespesas} despesa(s) registrada(s) no período`;
+  const elSaldoCofre = document.getElementById('relatorio-saldo-cofre');
+  elSaldoCofre.textContent = formatarMoeda(r.saldoCofrePeriodo);
+  elSaldoCofre.style.color = r.saldoCofrePeriodo < 0 ? 'var(--lsr-red)' : '#ffb74d';
 }
 
 function baixarPdfRelatorio() {
@@ -793,21 +799,30 @@ function baixarPdfRelatorio() {
   // ------------------------------------------------------------
   // Helper: seção com título + linhas em "tabela" com zebra striping
   // ------------------------------------------------------------
+  let primeiraSecao = true;
   function tituloSecao(texto) {
+    if (!primeiraSecao) {
+      // Linha divisória fina separando da seção anterior
+      doc.setDrawColor(225, 225, 225);
+      doc.setLineWidth(0.2);
+      doc.line(MARGEM, y - 3, LARGURA_PAGINA - MARGEM, y - 3);
+    }
+    primeiraSecao = false;
+
     doc.setFillColor(...COR_ESCURA);
     doc.rect(MARGEM, y, 3, 5, 'F');
     doc.setTextColor(30, 30, 30);
     doc.setFont(undefined, 'bold');
     doc.setFontSize(11);
     doc.text(texto, MARGEM + 6, y + 4.5);
-    y += 9;
+    y += 12; // espaço generoso — evita a faixa da primeira linha invadir o título
   }
 
   function linhaTabela(rotulo, valor, corValor, destaque) {
-    const alturaLinha = 8;
+    const alturaLinha = 9;
     if (destaque) {
       doc.setFillColor(...COR_CINZA_MEDIO_BG);
-      doc.rect(MARGEM, y - 5.5, LARGURA_UTIL, alturaLinha, 'F');
+      doc.rect(MARGEM, y - 6, LARGURA_UTIL, alturaLinha, 'F');
     }
     doc.setFont(undefined, destaque ? 'bold' : 'normal');
     doc.setFontSize(10);
@@ -851,9 +866,16 @@ function baixarPdfRelatorio() {
   // ------------------------------------------------------------
   // Despesas reais de manutenção
   // ------------------------------------------------------------
-  tituloSecao('Despesas Reais de Manutenção');
-  linhaTabela('Total gasto no período', formatarMoeda(r.totalDespesasReais), COR_VERMELHA, true);
+  tituloSecao('Cofre de Manutenção (neste período)');
+  linhaTabela('Reservado (manutenção + depreciação)', formatarMoeda(r.custoManutencao + r.custoDepreciacao));
+  linhaTabela('Gasto real registrado', formatarMoeda(r.totalDespesasReais), COR_VERMELHA);
   linhaTabela('Quantidade de despesas', r.quantidadeDespesas);
+  linhaTabela(
+    'Saldo do Cofre no período',
+    formatarMoeda(r.saldoCofrePeriodo),
+    r.saldoCofrePeriodo < 0 ? COR_VERMELHA : [204, 130, 0],
+    true
+  );
 
   // ------------------------------------------------------------
   // Rodapé
