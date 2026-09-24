@@ -259,6 +259,24 @@
         <p id="erro-prazo-offline" class="hidden text-sm mt-2" style="color:var(--lsr-red)"></p>
       </div>
 
+      <!-- Valores dos planos -->
+      <div class="card-lsr p-4">
+        <h2 class="text-sm font-semibold mb-1 text-white">Valores dos planos</h2>
+        <p class="text-xs mb-3" style="color:var(--lsr-text-muted)">
+          Preço vigente de cada plano. Ao aprovar/renovar um motorista, o valor da hora é "congelado" pra ele — só muda de novo na próxima renovação.
+        </p>
+        <div class="flex flex-col gap-2 mb-3">
+          <div class="flex items-center gap-2"><span class="text-xs w-28 shrink-0" style="color:var(--lsr-text-muted)">Teste 7 dias</span><input type="number" step="0.01" min="0" id="preco-teste_7" class="input-lsr flex-1" placeholder="0,00"></div>
+          <div class="flex items-center gap-2"><span class="text-xs w-28 shrink-0" style="color:var(--lsr-text-muted)">Teste 15 dias</span><input type="number" step="0.01" min="0" id="preco-teste_15" class="input-lsr flex-1" placeholder="0,00"></div>
+          <div class="flex items-center gap-2"><span class="text-xs w-28 shrink-0" style="color:var(--lsr-text-muted)">Mensal</span><input type="number" step="0.01" min="0" id="preco-mensal" class="input-lsr flex-1" placeholder="0,00"></div>
+          <div class="flex items-center gap-2"><span class="text-xs w-28 shrink-0" style="color:var(--lsr-text-muted)">Trimestral</span><input type="number" step="0.01" min="0" id="preco-trimestral" class="input-lsr flex-1" placeholder="0,00"></div>
+          <div class="flex items-center gap-2"><span class="text-xs w-28 shrink-0" style="color:var(--lsr-text-muted)">Semestral</span><input type="number" step="0.01" min="0" id="preco-semestral" class="input-lsr flex-1" placeholder="0,00"></div>
+          <div class="flex items-center gap-2"><span class="text-xs w-28 shrink-0" style="color:var(--lsr-text-muted)">Anual</span><input type="number" step="0.01" min="0" id="preco-anual" class="input-lsr flex-1" placeholder="0,00"></div>
+        </div>
+        <button id="btn-salvar-precos" class="btn-lsr btn-lsr-primary w-full">Salvar valores</button>
+        <p id="erro-precos" class="hidden text-sm mt-2" style="color:var(--lsr-red)"></p>
+      </div>
+
       <!-- Configuração: aviso de vencimento do plano -->
       <div class="card-lsr p-4">
         <h2 class="text-sm font-semibold mb-1 text-white">Aviso de vencimento</h2>
