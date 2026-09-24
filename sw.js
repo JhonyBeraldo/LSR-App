@@ -3,7 +3,7 @@
 // IMPORTANTE: sempre que publicar mudanças em arquivos estáticos,
 // incremente CACHE_VERSION para forçar atualização nos celulares.
 
-const CACHE_VERSION = 'lsr-v26';
+const CACHE_VERSION = 'lsr-v27';
 // Caminhos RELATIVOS (sem "/" na frente) — essencial para funcionar
 // em subpasta (ex: GitHub Pages de projeto: usuario.github.io/LSR-App/).
 const APP_SHELL = [
@@ -69,15 +69,26 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Ignora esquemas que o navegador não deixa cachear (ex: extensões
+  // injetando chrome-extension://). Sem isso, cache.put() falha com
+  // uma promise rejeitada sem tratamento — sujeira no console, mesmo
+  // que não trave o app.
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    return;
+  }
+
   // App shell: cache-first
   event.respondWith(
     caches.match(event.request).then((cached) => {
       return cached || fetch(event.request).then((response) => {
-        // Cacheia dinamicamente novos recursos estáticos
+        // Cacheia dinamicamente novos recursos estáticos (só http/https)
         if (event.request.method === 'GET' && response.ok) {
           const responseClone = response.clone();
           caches.open(CACHE_VERSION).then((cache) => {
-            cache.put(event.request, responseClone);
+            cache.put(event.request, responseClone).catch(() => {
+              // Ignora silenciosamente qualquer requisição não-cacheável
+              // (ex: geradas por extensões do navegador)
+            });
           });
         }
         return response;
