@@ -26,6 +26,9 @@
 
   <!-- Supabase JS -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+  <!-- jsPDF (geração de PDF do relatório financeiro, direto no navegador) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body class="tela-cheia" style="background-color:#121212;">
 
@@ -59,6 +62,10 @@
           <a href="#" id="link-ir-cadastro" class="font-semibold" style="color:var(--lsr-green)">Cadastre-se</a>
         </p>
       </form>
+
+      <button id="btn-whatsapp-suporte-login" class="btn-lsr w-full mt-4" style="background-color:#25D366; color:#0a0a0a;">📞 Falar com o suporte</button>
+
+      <p class="text-center text-xs mt-6" style="color:var(--lsr-text-muted)">Desenvolvido por Jhony Beraldo</p>
     </div>
   </div>
 
@@ -152,7 +159,8 @@
         <img src="icons/icon-192.png" alt="LSR" class="w-8 h-8">
         <div>
           <span class="font-bold text-white block leading-tight">LSR App</span>
-          <span id="home-email" class="text-xs leading-tight block" style="color:var(--lsr-text-muted)"></span>
+          <span class="text-xs leading-tight block" style="color:var(--lsr-text-muted)">Lucro Sobre Rodas</span>
+          <span id="home-email" class="text-xs leading-tight block mt-0.5" style="color:var(--lsr-text-muted)"></span>
         </div>
       </div>
       <span id="status-conexao" class="text-xs px-2 py-1 rounded-full"></span>
@@ -205,6 +213,8 @@
       </div>
 
       <button id="btn-abrir-config-motorista" class="btn-lsr btn-lsr-outline w-full max-w-sm">⚙️ Configurações</button>
+
+      <p class="text-xs text-center mt-4" style="color:var(--lsr-text-muted)">Desenvolvido por Jhony Beraldo</p>
     </main>
   </div>
 
@@ -218,6 +228,10 @@
     </header>
 
     <main class="flex-1 px-5 pb-6 overflow-y-auto flex flex-col gap-2">
+      <button id="btn-ir-relatorio" class="card-lsr p-4 flex items-center justify-between text-left">
+        <span class="text-white font-semibold">📊 Relatório Financeiro</span>
+        <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
+      </button>
       <button id="btn-indicar-amigo" class="card-lsr p-4 flex items-center justify-between text-left">
         <span class="text-white font-semibold">🎁 Indicar amigo</span>
         <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
@@ -228,6 +242,10 @@
       </button>
       <button id="btn-ir-veiculos" class="card-lsr p-4 flex items-center justify-between text-left">
         <span class="text-white font-semibold">🚗 Meus Veículos</span>
+        <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
+      </button>
+      <button id="btn-whatsapp-suporte-motorista" class="card-lsr p-4 flex items-center justify-between text-left">
+        <span class="text-white font-semibold">📞 Falar com o suporte</span>
         <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
       </button>
       <button id="btn-logout" class="card-lsr p-4 flex items-center justify-between text-left mt-4">
@@ -331,6 +349,14 @@
         </div>
         <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
       </button>
+
+      <button id="btn-menu-whatsapp-suporte" class="card-lsr p-4 flex items-center justify-between text-left">
+        <div>
+          <p class="text-white font-semibold">📞 WhatsApp de suporte</p>
+          <p class="text-xs" style="color:var(--lsr-text-muted)">Número que os motoristas usam pra falar com você</p>
+        </div>
+        <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
+      </button>
     </main>
   </div>
 
@@ -389,6 +415,26 @@
           <button id="btn-salvar-dias-aviso" class="btn-lsr btn-lsr-primary px-5">Salvar</button>
         </div>
         <p id="erro-dias-aviso" class="hidden text-sm mt-2" style="color:var(--lsr-red)"></p>
+      </div>
+    </main>
+  </div>
+
+  <!-- ---------------------------------------------------------- -->
+  <!-- SUBTELA: WHATSAPP DE SUPORTE -->
+  <!-- ---------------------------------------------------------- -->
+  <div id="tela-config-whatsapp" class="tela hidden tela-cheia flex flex-col">
+    <header class="flex items-center gap-3 px-5 py-4">
+      <button class="btn-voltar-config-menu text-2xl leading-none" style="color:var(--lsr-text-muted)">←</button>
+      <span class="font-bold text-white text-lg">WhatsApp de Suporte</span>
+    </header>
+    <main class="flex-1 px-5 pb-6 overflow-y-auto">
+      <div class="card-lsr p-4">
+        <p class="text-xs mb-3" style="color:var(--lsr-text-muted)">
+          Número (com DDD) que aparece no botão "Falar com o suporte" pro motorista, tanto na tela de login quanto dentro do app.
+        </p>
+        <input type="text" id="input-whatsapp-suporte" class="input-lsr w-full mb-3" placeholder="44984373004">
+        <button id="btn-salvar-whatsapp-suporte" class="btn-lsr btn-lsr-primary w-full">Salvar</button>
+        <p id="erro-whatsapp-suporte" class="hidden text-sm mt-2" style="color:var(--lsr-red)"></p>
       </div>
     </main>
   </div>
@@ -525,6 +571,68 @@
         </div>
       </form>
     </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- TELA: RELATÓRIO FINANCEIRO -->
+  <!-- ============================================================ -->
+  <div id="tela-relatorio" class="tela hidden tela-cheia flex flex-col">
+    <header class="flex items-center gap-3 px-5 py-4">
+      <button id="btn-voltar-config-relatorio" class="text-2xl leading-none" style="color:var(--lsr-text-muted)">←</button>
+      <span class="font-bold text-white text-lg">Relatório Financeiro</span>
+    </header>
+
+    <main class="flex-1 px-5 pb-6 overflow-y-auto flex flex-col gap-4">
+      <!-- Período -->
+      <div class="card-lsr p-4">
+        <p class="text-xs mb-2" style="color:var(--lsr-text-muted)">Período</p>
+        <div class="grid grid-cols-2 gap-2 mb-3">
+          <div>
+            <label class="text-xs mb-1 block" style="color:var(--lsr-text-muted)">De</label>
+            <input type="date" id="relatorio-data-inicio" class="input-lsr w-full">
+          </div>
+          <div>
+            <label class="text-xs mb-1 block" style="color:var(--lsr-text-muted)">Até</label>
+            <input type="date" id="relatorio-data-fim" class="input-lsr w-full">
+          </div>
+        </div>
+        <div class="flex gap-2 mb-3">
+          <button class="btn-periodo-relatorio btn-lsr btn-lsr-outline flex-1 text-xs" data-periodo="7dias" style="min-height:38px;">7 dias</button>
+          <button class="btn-periodo-relatorio btn-lsr btn-lsr-outline flex-1 text-xs" data-periodo="mes" style="min-height:38px;">Este mês</button>
+          <button class="btn-periodo-relatorio btn-lsr btn-lsr-outline flex-1 text-xs" data-periodo="ano" style="min-height:38px;">Este ano</button>
+        </div>
+        <button id="btn-gerar-relatorio" class="btn-lsr btn-lsr-primary w-full">Gerar relatório</button>
+      </div>
+
+      <!-- Resultado -->
+      <div id="resultado-relatorio" class="hidden flex flex-col gap-3">
+        <div class="card-lsr p-4 text-center">
+          <p class="text-xs mb-1" style="color:var(--lsr-text-muted)">Lucro líquido do período</p>
+          <p id="relatorio-lucro-liquido" class="text-3xl font-bold">R$ 0,00</p>
+        </div>
+
+        <div class="card-lsr p-4">
+          <div class="flex justify-between mb-2"><span style="color:var(--lsr-text-muted)">Turnos fechados</span><span id="relatorio-qtd-turnos" class="text-white font-semibold"></span></div>
+          <div class="flex justify-between mb-2"><span style="color:var(--lsr-text-muted)">Distância total</span><span id="relatorio-distancia" class="text-white font-semibold"></span></div>
+          <div class="flex justify-between mb-2"><span style="color:var(--lsr-text-muted)">Faturamento bruto</span><span id="relatorio-faturamento" class="text-white font-semibold"></span></div>
+          <div class="flex justify-between mb-2"><span style="color:var(--lsr-text-muted)">Custo combustível</span><span id="relatorio-custo-combustivel" class="text-custo"></span></div>
+          <div class="flex justify-between mb-2"><span style="color:var(--lsr-text-muted)">Custo manutenção</span><span id="relatorio-custo-manutencao" class="text-custo"></span></div>
+          <div class="flex justify-between mb-2"><span style="color:var(--lsr-text-muted)">Custo depreciação</span><span id="relatorio-custo-depreciacao" class="text-custo"></span></div>
+          <div class="flex justify-between mb-2 font-semibold"><span style="color:var(--lsr-text-muted)">Custo total</span><span id="relatorio-custo-total" class="text-custo"></span></div>
+          <div class="flex justify-between mb-2"><span style="color:var(--lsr-text-muted)">Lucro médio / turno</span><span id="relatorio-lucro-medio-turno" class="text-white font-semibold"></span></div>
+          <div class="flex justify-between"><span style="color:var(--lsr-text-muted)">Lucro médio / km</span><span id="relatorio-lucro-medio-km" class="text-white font-semibold"></span></div>
+        </div>
+
+        <div class="card-lsr p-4">
+          <div class="flex justify-between mb-1"><span style="color:var(--lsr-text-muted)">Despesas reais de manutenção</span><span id="relatorio-despesas-reais" class="font-semibold" style="color:var(--lsr-red)"></span></div>
+          <p id="relatorio-despesas-qtd" class="text-xs" style="color:var(--lsr-text-muted)"></p>
+        </div>
+
+        <button id="btn-baixar-pdf-relatorio" class="btn-lsr btn-lsr-primary w-full">📄 Baixar PDF</button>
+      </div>
+
+      <p id="relatorio-vazio" class="hidden text-sm text-center py-4" style="color:var(--lsr-text-muted)">Nenhum turno fechado nesse período.</p>
+    </main>
   </div>
 
   <!-- ============================================================ -->
