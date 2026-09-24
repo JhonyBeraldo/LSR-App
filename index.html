@@ -207,8 +207,13 @@
 
       <!-- Todos os motoristas -->
       <div>
-        <h2 class="text-sm font-semibold mb-2" style="color:var(--lsr-text-muted)">Todos os motoristas</h2>
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-sm font-semibold" style="color:var(--lsr-text-muted)">Todos os motoristas</h2>
+          <button id="btn-filtro-vencendo" class="text-xs px-3 py-1 rounded-full font-semibold" style="border:1px solid var(--lsr-text-muted); color:var(--lsr-text-muted);">⚠️ Só vencidos/vencendo</button>
+        </div>
+        <input type="text" id="input-busca-motorista" class="input-lsr w-full mb-3" placeholder="Buscar por nome...">
         <div id="admin-lista-motoristas" class="flex flex-col gap-2"></div>
+        <p id="admin-lista-motoristas-vazio" class="hidden text-sm text-center py-4" style="color:var(--lsr-text-muted)">Nenhum motorista encontrado.</p>
       </div>
 
       <!-- Configuração: prazo de tolerância offline -->
@@ -241,6 +246,33 @@
   </div>
 
   <!-- ============================================================ -->
+  <!-- MODAL: DETALHE DO MOTORISTA -->
+  <!-- ============================================================ -->
+  <div id="modal-detalhe-motorista" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center" style="background-color: rgba(0,0,0,0.6);">
+    <div class="card-lsr w-full sm:max-w-sm p-6 max-h-[90vh] overflow-y-auto" style="border-radius: 20px 20px 0 0;">
+      <div class="flex items-center justify-between mb-4">
+        <h2 id="detalhe-motorista-nome" class="text-lg font-bold text-white"></h2>
+        <button id="btn-fechar-detalhe-motorista" class="text-2xl leading-none" style="color:var(--lsr-text-muted)">×</button>
+      </div>
+
+      <div class="flex flex-col gap-2 mb-4 text-sm">
+        <div class="flex justify-between"><span style="color:var(--lsr-text-muted)">WhatsApp</span><span id="detalhe-motorista-whatsapp" class="text-white"></span></div>
+        <div class="flex justify-between"><span style="color:var(--lsr-text-muted)">Status</span><span id="detalhe-motorista-status" class="font-semibold"></span></div>
+        <div class="flex justify-between"><span style="color:var(--lsr-text-muted)">Plano</span><span id="detalhe-motorista-plano" class="text-white"></span></div>
+        <div class="flex justify-between"><span style="color:var(--lsr-text-muted)">Vencimento</span><span id="detalhe-motorista-vencimento" class="font-semibold"></span></div>
+        <div class="flex justify-between"><span style="color:var(--lsr-text-muted)">Turnos registrados</span><span id="detalhe-motorista-turnos" class="text-white"></span></div>
+      </div>
+
+      <div class="flex flex-col gap-2">
+        <button id="btn-detalhe-whatsapp" class="btn-lsr w-full" style="background-color:#25D366; color:#0a0a0a;">📲 Avisar por WhatsApp</button>
+        <button id="btn-detalhe-renovar" class="btn-lsr btn-lsr-outline w-full">Renovar plano</button>
+        <button id="btn-detalhe-senha" class="btn-lsr btn-lsr-outline w-full">🔑 Resetar senha</button>
+        <button id="btn-detalhe-toggle" class="btn-lsr btn-lsr-outline w-full"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
   <!-- MODAL: ESCOLHER PLANO (aprovar ou renovar motorista) -->
   <!-- ============================================================ -->
   <div id="modal-plano-motorista" class="hidden fixed inset-0 z-50 flex items-center justify-center px-6" style="background-color: rgba(0,0,0,0.6);">
@@ -249,6 +281,8 @@
       <p id="modal-plano-motorista-nome" class="text-sm mb-4" style="color:var(--lsr-text-muted)"></p>
 
       <div class="grid grid-cols-2 gap-3 mb-3">
+        <button class="btn-lsr btn-lsr-outline btn-escolher-plano" data-plano="teste_7">Teste 7 dias</button>
+        <button class="btn-lsr btn-lsr-outline btn-escolher-plano" data-plano="teste_15">Teste 15 dias</button>
         <button class="btn-lsr btn-lsr-outline btn-escolher-plano" data-plano="mensal">Mensal</button>
         <button class="btn-lsr btn-lsr-outline btn-escolher-plano" data-plano="trimestral">Trimestral</button>
         <button class="btn-lsr btn-lsr-outline btn-escolher-plano" data-plano="semestral">Semestral</button>
