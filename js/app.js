@@ -116,6 +116,7 @@ function salvarSessaoCache(usuario, perfil) {
     localStorage.setItem(SESSAO_CACHE_KEY, JSON.stringify({
       userId: usuario.id,
       nome: perfil.nome,
+      role: perfil.role,
       aprovadoEm: Date.now()
     }));
   } catch (e) { /* localStorage indisponível — segue sem cache */ }
@@ -165,6 +166,14 @@ async function verificarAcessoEDirecionar(usuario) {
       .then((v) => { if (v) salvarPrazoCache(parseInt(v, 10)); })
       .catch(() => {});
 
+    // Master vai pro painel administrativo, não pra home do motorista
+    if (perfil.role === 'master') {
+      document.getElementById('admin-nome').textContent = perfil.nome || 'Master';
+      mostrarTela('tela-admin');
+      await carregarPainelAdmin();
+      return;
+    }
+
     document.getElementById('home-email').textContent = perfil.nome || 'Motorista';
     mostrarTela('tela-home');
     await carregarEstadoHome();
@@ -190,7 +199,16 @@ async function verificarAcessoEDirecionar(usuario) {
 
       if (horasDesdeAprovado <= prazoDias * 24) {
         usuarioAtual = usuario;
-        perfilAtual = { nome: cache.nome, is_ativo: true };
+        perfilAtual = { nome: cache.nome, role: cache.role, is_ativo: true };
+
+        if (cache.role === 'master') {
+          // Painel master exige dados atualizados (aprovações, estatísticas);
+          // não faz sentido operar offline nesse caso específico.
+          mostrarErro('erro-login', 'O painel administrativo requer conexão com a internet.');
+          mostrarTela('tela-login');
+          return;
+        }
+
         document.getElementById('home-email').textContent = cache.nome || 'Motorista';
         mostrarTela('tela-home');
         await carregarEstadoHome();
@@ -514,6 +532,98 @@ async function processarEncerramentoFinal() {
   } finally {
     btn.disabled = false;
     btn.textContent = 'Confirmar';
+  }
+}
+
+// ------------------------------------------------------------
+// PAINEL MASTER
+// ------------------------------------------------------------
+async function carregarPainelAdmin() {
+  try {
+    const [motoristas, totalTurnos, prazoDias] = await Promise.all([
+      Admin.listarMotoristas(),
+      Admin.contarTurnosTotais(),
+      Admin.getPrazoOfflineDias()
+    ]);
+
+    const ativos = motoristas.filter((m) => m.is_ativo);
+    const pendentes = motoristas.filter((m) => !m.is_ativo);
+
+    document.getElementById('admin-total-motoristas').textContent = ativos.length;
+    document.getElementById('admin-total-turnos').textContent = totalTurnos;
+    document.getElementById('input-prazo-offline').value = prazoDias;
+
+    // Pendentes
+    const containerPendentes = document.getElementById('admin-lista-pendentes');
+    const pendentesVazio = document.getElementById('admin-pendentes-vazio');
+    containerPendentes.innerHTML = '';
+
+    if (!pendentes.length) {
+      pendentesVazio.classList.remove('hidden');
+    } else {
+      pendentesVazio.classList.add('hidden');
+      pendentes.forEach((m) => {
+        const card = document.createElement('div');
+        card.className = 'card-lsr p-3 flex items-center justify-between';
+        card.innerHTML = `
+          <span class="text-white text-sm">${m.nome || 'Sem nome'}</span>
+          <button class="btn-aprovar text-sm font-semibold px-3 py-1 rounded-full" style="background-color:var(--lsr-green); color:#0a0a0a;" data-id="${m.id}">Aprovar</button>
+        `;
+        card.querySelector('.btn-aprovar').addEventListener('click', async (e) => {
+          const btn = e.target;
+          btn.disabled = true;
+          btn.textContent = '...';
+          try {
+            await Admin.aprovarMotorista(m.id);
+            await carregarPainelAdmin();
+          } catch (err) {
+            console.error(err);
+            alert('Não foi possível aprovar. Verifique sua conexão.');
+            btn.disabled = false;
+            btn.textContent = 'Aprovar';
+          }
+        });
+        containerPendentes.appendChild(card);
+      });
+    }
+
+    // Todos os motoristas
+    const containerTodos = document.getElementById('admin-lista-motoristas');
+    containerTodos.innerHTML = '';
+    motoristas.forEach((m) => {
+      const card = document.createElement('div');
+      card.className = 'card-lsr p-3 flex items-center justify-between';
+      const statusCor = m.is_ativo ? 'var(--lsr-green)' : 'var(--lsr-red)';
+      const statusTexto = m.is_ativo ? 'Ativo' : 'Bloqueado';
+      const acaoTexto = m.is_ativo ? 'Bloquear' : 'Aprovar';
+      card.innerHTML = `
+        <div>
+          <p class="text-white text-sm">${m.nome || 'Sem nome'}</p>
+          <p class="text-xs" style="color:${statusCor}">${statusTexto}</p>
+        </div>
+        <button class="btn-toggle-motorista text-sm font-semibold" style="color:${m.is_ativo ? 'var(--lsr-red)' : 'var(--lsr-green)'}" data-id="${m.id}" data-ativo="${m.is_ativo}">${acaoTexto}</button>
+      `;
+      card.querySelector('.btn-toggle-motorista').addEventListener('click', async (e) => {
+        const btn = e.target;
+        btn.disabled = true;
+        try {
+          if (m.is_ativo) {
+            await Admin.bloquearMotorista(m.id);
+          } else {
+            await Admin.aprovarMotorista(m.id);
+          }
+          await carregarPainelAdmin();
+        } catch (err) {
+          console.error(err);
+          alert('Não foi possível atualizar. Verifique sua conexão.');
+          btn.disabled = false;
+        }
+      });
+      containerTodos.appendChild(card);
+    });
+  } catch (err) {
+    console.error('[App] Erro ao carregar painel admin:', err);
+    alert('Não foi possível carregar o painel. Verifique sua conexão.');
   }
 }
 
@@ -1004,6 +1114,39 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   document.getElementById('btn-fechar-modal-editar').addEventListener('click', fecharModalEditarTurno);
+
+  // ------------------------------------------------------------
+  // Painel Master
+  // ------------------------------------------------------------
+  document.getElementById('btn-logout-admin').addEventListener('click', async () => {
+    await Auth.logout();
+    try { localStorage.removeItem(SESSAO_CACHE_KEY); } catch (e) {}
+    usuarioAtual = null;
+    perfilAtual = null;
+    mostrarTela('tela-login');
+  });
+
+  document.getElementById('btn-salvar-prazo-offline').addEventListener('click', async () => {
+    esconderErro('erro-prazo-offline');
+    const dias = parseInt(document.getElementById('input-prazo-offline').value, 10);
+
+    if (!dias || dias <= 0) {
+      mostrarErro('erro-prazo-offline', 'Digite um número de dias maior que zero.');
+      return;
+    }
+
+    const btn = document.getElementById('btn-salvar-prazo-offline');
+    btn.disabled = true;
+    try {
+      await Admin.atualizarPrazoOfflineDias(dias);
+      salvarPrazoCache(dias);
+    } catch (err) {
+      mostrarErro('erro-prazo-offline', 'Não foi possível salvar. Verifique sua conexão.');
+      console.error(err);
+    } finally {
+      btn.disabled = false;
+    }
+  });
 
   document.getElementById('form-editar-turno').addEventListener('submit', async (e) => {
     e.preventDefault();
