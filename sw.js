@@ -3,7 +3,7 @@
 // IMPORTANTE: sempre que publicar mudanças em arquivos estáticos,
 // incremente CACHE_VERSION para forçar atualização nos celulares.
 
-const CACHE_VERSION = 'lsr-v23';
+const CACHE_VERSION = 'lsr-v24';
 // Caminhos RELATIVOS (sem "/" na frente) — essencial para funcionar
 // em subpasta (ex: GitHub Pages de projeto: usuario.github.io/LSR-App/).
 const APP_SHELL = [

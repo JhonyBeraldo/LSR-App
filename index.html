@@ -211,7 +211,10 @@
           <span id="admin-nome" class="text-xs leading-tight block" style="color:var(--lsr-text-muted)"></span>
         </div>
       </div>
-      <button id="btn-logout-admin" class="text-sm font-semibold" style="color:var(--lsr-red)">Sair</button>
+      <div class="flex items-center gap-3">
+        <button id="btn-abrir-config-admin" class="text-xl leading-none" style="color:var(--lsr-text-muted)">⚙️</button>
+        <button id="btn-logout-admin" class="text-sm font-semibold" style="color:var(--lsr-red)">Sair</button>
+      </div>
     </header>
 
     <main class="flex-1 px-5 pb-6 overflow-y-auto flex flex-col gap-5">
@@ -246,7 +249,31 @@
         <p id="admin-lista-motoristas-vazio" class="hidden text-sm text-center py-4" style="color:var(--lsr-text-muted)">Nenhum motorista encontrado.</p>
       </div>
 
-      <!-- Configuração: prazo de tolerância offline -->
+    </main>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- TELA: CONFIGURAÇÕES DO PAINEL MASTER -->
+  <!-- ============================================================ -->
+  <div id="tela-config-admin" class="tela hidden tela-cheia flex flex-col">
+    <header class="flex items-center gap-3 px-5 py-4">
+      <button id="btn-voltar-admin-config" class="text-2xl leading-none" style="color:var(--lsr-text-muted)">←</button>
+      <span class="font-bold text-white text-lg">Configurações</span>
+    </header>
+
+    <main class="flex-1 px-5 pb-6 overflow-y-auto flex flex-col gap-5">
+
+      <!-- Planos -->
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-sm font-semibold" style="color:var(--lsr-text-muted)">Planos</h2>
+          <button id="btn-novo-plano" class="text-xs px-3 py-1 rounded-full font-semibold" style="background-color:var(--lsr-green); color:#0a0a0a;">+ Novo plano</button>
+        </div>
+        <div id="lista-planos-config" class="flex flex-col gap-2"></div>
+        <p id="planos-config-vazio" class="hidden text-sm text-center py-4" style="color:var(--lsr-text-muted)">Nenhum plano cadastrado ainda.</p>
+      </div>
+
+      <!-- Tolerância offline -->
       <div class="card-lsr p-4">
         <h2 class="text-sm font-semibold mb-1 text-white">Tolerância offline</h2>
         <p class="text-xs mb-3" style="color:var(--lsr-text-muted)">
@@ -259,25 +286,7 @@
         <p id="erro-prazo-offline" class="hidden text-sm mt-2" style="color:var(--lsr-red)"></p>
       </div>
 
-      <!-- Valores dos planos -->
-      <div class="card-lsr p-4">
-        <h2 class="text-sm font-semibold mb-1 text-white">Valores dos planos</h2>
-        <p class="text-xs mb-3" style="color:var(--lsr-text-muted)">
-          Preço vigente de cada plano. Ao aprovar/renovar um motorista, o valor da hora é "congelado" pra ele — só muda de novo na próxima renovação.
-        </p>
-        <div class="flex flex-col gap-2 mb-3">
-          <div class="flex items-center gap-2"><span class="text-xs w-28 shrink-0" style="color:var(--lsr-text-muted)">Teste 7 dias</span><input type="number" step="0.01" min="0" id="preco-teste_7" class="input-lsr flex-1" placeholder="0,00"></div>
-          <div class="flex items-center gap-2"><span class="text-xs w-28 shrink-0" style="color:var(--lsr-text-muted)">Teste 15 dias</span><input type="number" step="0.01" min="0" id="preco-teste_15" class="input-lsr flex-1" placeholder="0,00"></div>
-          <div class="flex items-center gap-2"><span class="text-xs w-28 shrink-0" style="color:var(--lsr-text-muted)">Mensal</span><input type="number" step="0.01" min="0" id="preco-mensal" class="input-lsr flex-1" placeholder="0,00"></div>
-          <div class="flex items-center gap-2"><span class="text-xs w-28 shrink-0" style="color:var(--lsr-text-muted)">Trimestral</span><input type="number" step="0.01" min="0" id="preco-trimestral" class="input-lsr flex-1" placeholder="0,00"></div>
-          <div class="flex items-center gap-2"><span class="text-xs w-28 shrink-0" style="color:var(--lsr-text-muted)">Semestral</span><input type="number" step="0.01" min="0" id="preco-semestral" class="input-lsr flex-1" placeholder="0,00"></div>
-          <div class="flex items-center gap-2"><span class="text-xs w-28 shrink-0" style="color:var(--lsr-text-muted)">Anual</span><input type="number" step="0.01" min="0" id="preco-anual" class="input-lsr flex-1" placeholder="0,00"></div>
-        </div>
-        <button id="btn-salvar-precos" class="btn-lsr btn-lsr-primary w-full">Salvar valores</button>
-        <p id="erro-precos" class="hidden text-sm mt-2" style="color:var(--lsr-red)"></p>
-      </div>
-
-      <!-- Configuração: aviso de vencimento do plano -->
+      <!-- Aviso de vencimento -->
       <div class="card-lsr p-4">
         <h2 class="text-sm font-semibold mb-1 text-white">Aviso de vencimento</h2>
         <p class="text-xs mb-3" style="color:var(--lsr-text-muted)">
@@ -291,6 +300,39 @@
       </div>
 
     </main>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- MODAL: CADASTRAR/EDITAR PLANO -->
+  <!-- ============================================================ -->
+  <div id="modal-cadastrar-plano" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center" style="background-color: rgba(0,0,0,0.6);">
+    <div class="card-lsr w-full sm:max-w-sm p-6" style="border-radius: 20px 20px 0 0;">
+      <div class="flex items-center justify-between mb-4">
+        <h2 id="modal-cadastrar-plano-titulo" class="text-lg font-bold text-white">Novo plano</h2>
+        <button id="btn-fechar-modal-plano-cadastro" class="text-2xl leading-none" style="color:var(--lsr-text-muted)">×</button>
+      </div>
+
+      <form id="form-cadastrar-plano" class="flex flex-col gap-4">
+        <input type="hidden" id="plano-cadastro-id">
+        <div>
+          <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">Nome do plano</label>
+          <input type="text" id="plano-cadastro-nome" required class="input-lsr w-full" placeholder="Ex: Mensal, Trimestral, Promo Black Friday...">
+        </div>
+        <div>
+          <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">Duração (dias)</label>
+          <input type="number" min="1" step="1" id="plano-cadastro-dias" required class="input-lsr w-full" placeholder="Ex: 30">
+        </div>
+        <div>
+          <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">Valor (R$)</label>
+          <input type="number" min="0" step="0.01" id="plano-cadastro-valor" required class="input-lsr w-full" placeholder="0,00">
+        </div>
+
+        <p id="erro-cadastrar-plano" class="hidden text-sm" style="color:var(--lsr-red)"></p>
+
+        <button type="submit" class="btn-lsr btn-lsr-primary w-full mt-2">Salvar plano</button>
+        <button type="button" id="btn-alternar-ativo-plano" class="hidden btn-lsr btn-lsr-outline w-full"></button>
+      </form>
+    </div>
   </div>
 
   <!-- ============================================================ -->
@@ -328,14 +370,10 @@
       <h2 id="modal-plano-titulo" class="text-lg font-bold text-white mb-1">Escolher plano</h2>
       <p id="modal-plano-motorista-nome" class="text-sm mb-4" style="color:var(--lsr-text-muted)"></p>
 
-      <div class="grid grid-cols-2 gap-3 mb-3">
-        <button class="btn-lsr btn-lsr-outline btn-escolher-plano" data-plano="teste_7">Teste 7 dias</button>
-        <button class="btn-lsr btn-lsr-outline btn-escolher-plano" data-plano="teste_15">Teste 15 dias</button>
-        <button class="btn-lsr btn-lsr-outline btn-escolher-plano" data-plano="mensal">Mensal</button>
-        <button class="btn-lsr btn-lsr-outline btn-escolher-plano" data-plano="trimestral">Trimestral</button>
-        <button class="btn-lsr btn-lsr-outline btn-escolher-plano" data-plano="semestral">Semestral</button>
-        <button class="btn-lsr btn-lsr-outline btn-escolher-plano" data-plano="anual">Anual</button>
-      </div>
+      <div id="lista-planos-selecao" class="flex flex-col gap-2 mb-3"></div>
+      <p id="planos-selecao-vazio" class="hidden text-sm text-center py-3" style="color:var(--lsr-text-muted)">
+        Nenhum plano ativo cadastrado. Crie um em Configurações → Planos.
+      </p>
 
       <button id="btn-cancelar-plano" class="btn-lsr btn-lsr-outline w-full">Cancelar</button>
     </div>
