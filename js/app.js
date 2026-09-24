@@ -816,39 +816,9 @@ function fecharModalDetalheMotorista() {
 // ------------------------------------------------------------
 // TELA DE CONFIGURAÇÕES (tolerância offline, aviso, planos)
 // ------------------------------------------------------------
-async function carregarConfigAdmin() {
+async function carregarConfigPlanos() {
   try {
-    const [prazoDias, diasAviso, planos, configIndicacao, indicacoes] = await Promise.all([
-      Admin.getPrazoOfflineDias(),
-      Admin.getDiasAvisoVencimento(),
-      Admin.listarPlanos(true),
-      Admin.getConfigIndicacao(),
-      Admin.listarIndicacoesRecentes(20)
-    ]);
-    document.getElementById('input-prazo-offline').value = prazoDias;
-    document.getElementById('input-dias-aviso').value = diasAviso;
-    document.getElementById('input-indicacao-dias-bonus').value = configIndicacao.diasBonus;
-    document.getElementById('input-indicacao-dias-minimo').value = configIndicacao.diasMinimo;
-
-    const containerIndicacoes = document.getElementById('lista-indicacoes');
-    const indicacoesVazio = document.getElementById('indicacoes-vazio');
-    containerIndicacoes.innerHTML = '';
-
-    if (!indicacoes.length) {
-      indicacoesVazio.classList.remove('hidden');
-    } else {
-      indicacoesVazio.classList.add('hidden');
-      indicacoes.forEach((r) => {
-        const item = document.createElement('div');
-        item.className = 'card-lsr p-3';
-        item.innerHTML = `
-          <p class="text-sm text-white"><strong>${r.indicadorNome}</strong> indicou <strong>${r.indicadoNome}</strong></p>
-          <p class="text-xs" style="color:var(--lsr-green)">+${r.dias_bonus_concedidos} dias de bônus · ${formatarDataBR(r.created_at.slice(0, 10))}</p>
-        `;
-        containerIndicacoes.appendChild(item);
-      });
-    }
-
+    const planos = await Admin.listarPlanos(true);
     const container = document.getElementById('lista-planos-config');
     const vazio = document.getElementById('planos-config-vazio');
     container.innerHTML = '';
@@ -874,8 +844,58 @@ async function carregarConfigAdmin() {
       container.appendChild(card);
     });
   } catch (err) {
-    console.error('[App] Erro ao carregar configurações:', err);
-    alert('Não foi possível carregar as configurações. Verifique sua conexão.');
+    console.error('[App] Erro ao carregar planos:', err);
+    alert('Não foi possível carregar os planos. Verifique sua conexão.');
+  }
+}
+
+async function carregarConfigTolerancia() {
+  try {
+    document.getElementById('input-prazo-offline').value = await Admin.getPrazoOfflineDias();
+  } catch (err) {
+    console.error('[App] Erro ao carregar tolerância offline:', err);
+  }
+}
+
+async function carregarConfigAviso() {
+  try {
+    document.getElementById('input-dias-aviso').value = await Admin.getDiasAvisoVencimento();
+  } catch (err) {
+    console.error('[App] Erro ao carregar aviso de vencimento:', err);
+  }
+}
+
+async function carregarConfigIndicacao() {
+  try {
+    const [configIndicacao, indicacoes] = await Promise.all([
+      Admin.getConfigIndicacao(),
+      Admin.listarIndicacoesRecentes(20)
+    ]);
+    document.getElementById('input-indicacao-dias-bonus').value = configIndicacao.diasBonus;
+    document.getElementById('input-indicacao-dias-minimo').value = configIndicacao.diasMinimo;
+
+    const container = document.getElementById('lista-indicacoes');
+    const vazio = document.getElementById('indicacoes-vazio');
+    container.innerHTML = '';
+
+    if (!indicacoes.length) {
+      vazio.classList.remove('hidden');
+      return;
+    }
+    vazio.classList.add('hidden');
+
+    indicacoes.forEach((r) => {
+      const item = document.createElement('div');
+      item.className = 'card-lsr p-3';
+      item.innerHTML = `
+        <p class="text-sm text-white"><strong>${r.indicadorNome}</strong> indicou <strong>${r.indicadoNome}</strong></p>
+        <p class="text-xs" style="color:var(--lsr-green)">+${r.dias_bonus_concedidos} dias de bônus · ${formatarDataBR(r.created_at.slice(0, 10))}</p>
+      `;
+      container.appendChild(item);
+    });
+  } catch (err) {
+    console.error('[App] Erro ao carregar programa de indicação:', err);
+    alert('Não foi possível carregar. Verifique sua conexão.');
   }
 }
 
@@ -897,7 +917,7 @@ function abrirModalCadastrarPlano(planoExistente) {
       try {
         await Admin.alternarAtivoPlano(planoExistente.id, !planoExistente.is_ativo);
         fecharModalCadastrarPlano();
-        await carregarConfigAdmin();
+        await carregarConfigPlanos();
       } catch (err) {
         console.error(err);
         alert('Não foi possível atualizar. Verifique sua conexão.');
@@ -1563,13 +1583,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('btn-fechar-detalhe-motorista').addEventListener('click', fecharModalDetalheMotorista);
 
-  // Navegação pra tela de configurações
+  // Navegação pra tela de configurações (agora um menu, com subtelas)
   document.getElementById('btn-abrir-config-admin').addEventListener('click', () => {
     mostrarTela('tela-config-admin');
-    carregarConfigAdmin();
   });
   document.getElementById('btn-voltar-admin-config').addEventListener('click', () => {
     mostrarTela('tela-admin');
+  });
+
+  document.getElementById('btn-menu-planos').addEventListener('click', () => {
+    mostrarTela('tela-config-planos');
+    carregarConfigPlanos();
+  });
+  document.getElementById('btn-menu-tolerancia').addEventListener('click', () => {
+    mostrarTela('tela-config-tolerancia');
+    carregarConfigTolerancia();
+  });
+  document.getElementById('btn-menu-aviso').addEventListener('click', () => {
+    mostrarTela('tela-config-aviso');
+    carregarConfigAviso();
+  });
+  document.getElementById('btn-menu-indicacao').addEventListener('click', () => {
+    mostrarTela('tela-config-indicacao');
+    carregarConfigIndicacao();
+  });
+
+  document.querySelectorAll('.btn-voltar-config-menu').forEach((btn) => {
+    btn.addEventListener('click', () => mostrarTela('tela-config-admin'));
   });
 
   // Cadastro/edição de planos
@@ -1609,7 +1649,7 @@ document.addEventListener('DOMContentLoaded', () => {
         await Admin.criarPlano({ nome, diasDuracao: dias, valor });
       }
       fecharModalCadastrarPlano();
-      await carregarConfigAdmin();
+      await carregarConfigPlanos();
     } catch (err) {
       mostrarErro('erro-cadastrar-plano', 'Não foi possível salvar. Verifique sua conexão.');
       console.error(err);
