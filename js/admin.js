@@ -57,6 +57,91 @@ const Admin = {
   },
 
   /**
+   * Retorna um mapa { user_id: quantidade de turnos } — pra mostrar
+   * o total de cada motorista individualmente, não só o geral.
+   */
+  async contarTurnosPorMotorista() {
+    const { data, error } = await supabaseClient
+      .from('turnos')
+      .select('user_id')
+      .neq('status', 'ativo');
+    if (error) throw error;
+
+    const contagem = {};
+    (data || []).forEach((t) => {
+      contagem[t.user_id] = (contagem[t.user_id] || 0) + 1;
+    });
+    return contagem;
+  },
+
+  // ------------------------------------------------------------
+  // PLANOS DE ASSINATURA
+  // is_ativo continua controlando o acesso (pausar/liberar).
+  // plano_vencimento é só informativo — usado pro aviso ao motorista,
+  // NUNCA bloqueia sozinho.
+  // ------------------------------------------------------------
+
+  /**
+   * Calcula a nova data de vencimento. Se o plano atual ainda não
+   * venceu, soma a partir do vencimento atual (renovação antecipada
+   * não "perde" tempo já pago); senão, soma a partir de hoje.
+   */
+  calcularNovoVencimento(vencimentoAtual, tipoPlano) {
+    const hoje = new Date();
+    let base = hoje;
+    if (vencimentoAtual) {
+      const atual = new Date(vencimentoAtual + 'T00:00:00');
+      if (atual > hoje) base = atual;
+    }
+    const meses = { mensal: 1, trimestral: 3, semestral: 6, anual: 12 }[tipoPlano] || 1;
+    const novo = new Date(base);
+    novo.setMonth(novo.getMonth() + meses);
+    return novo.toISOString().slice(0, 10);
+  },
+
+  /**
+   * Aprova (ou renova) um motorista com um plano específico —
+   * já calcula e grava a nova data de vencimento.
+   */
+  async aprovarComPlano(id, tipoPlano, vencimentoAtual) {
+    const novoVencimento = this.calcularNovoVencimento(vencimentoAtual, tipoPlano);
+    const { data, error } = await supabaseClient
+      .from('perfis')
+      .update({ is_ativo: true, plano: tipoPlano, plano_vencimento: novoVencimento })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  /**
+   * Lê a quantidade de dias de antecedência configurada pro aviso
+   * de vencimento (padrão 3).
+   */
+  async getDiasAvisoVencimento() {
+    const valor = await Auth.getConfig('dias_aviso_vencimento');
+    return valor ? parseInt(valor, 10) : 3;
+  },
+
+  async atualizarDiasAvisoVencimento(dias) {
+    return Auth.atualizarConfig('dias_aviso_vencimento', dias);
+  },
+
+  // ------------------------------------------------------------
+  // RESET DE SENHA (via Edge Function — precisa de deploy separado,
+  // veja as instruções que acompanham este arquivo)
+  // ------------------------------------------------------------
+  async resetarSenha(motoristaId, novaSenha) {
+    const { data, error } = await supabaseClient.functions.invoke('admin-reset-senha', {
+      body: { motorista_id: motoristaId, nova_senha: novaSenha }
+    });
+    if (error) throw error;
+    if (data && data.error) throw new Error(data.error);
+    return data;
+  },
+
+  /**
    * Lê o prazo de tolerância offline configurado (em dias).
    */
   async getPrazoOfflineDias() {

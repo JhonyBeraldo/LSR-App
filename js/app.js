@@ -411,6 +411,7 @@ async function carregarEstadoHome() {
   }
 
   await atualizarStatusConexao();
+  await atualizarAvisoVencimento();
 }
 
 function verificarTurnoEsquecido() {
@@ -538,13 +539,37 @@ async function processarEncerramentoFinal() {
 // ------------------------------------------------------------
 // PAINEL MASTER
 // ------------------------------------------------------------
+let motoristaEmContextoId = null; // usado pelos modais de plano/reset de senha
+
+function formatarVencimento(dataISO) {
+  if (!dataISO) return { texto: 'Sem plano definido', cor: 'var(--lsr-text-muted)' };
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  const venc = new Date(dataISO + 'T00:00:00');
+  const dias = Math.round((venc - hoje) / (1000 * 60 * 60 * 24));
+
+  if (dias < 0) {
+    return { texto: `Vencido há ${Math.abs(dias)} dia(s)`, cor: 'var(--lsr-red)' };
+  }
+  if (dias === 0) {
+    return { texto: 'Vence hoje', cor: 'var(--lsr-red)' };
+  }
+  if (dias <= 7) {
+    return { texto: `Vence em ${dias} dia(s)`, cor: '#ffb74d' };
+  }
+  return { texto: `Vence em ${formatarDataBR(dataISO)}`, cor: 'var(--lsr-text-muted)' };
+}
+
 async function carregarPainelAdmin() {
   try {
-    const [motoristas, totalTurnos, prazoDias] = await Promise.all([
+    const [motoristas, totalTurnos, prazoDias, turnosPorMotorista, diasAviso] = await Promise.all([
       Admin.listarMotoristas(),
       Admin.contarTurnosTotais(),
-      Admin.getPrazoOfflineDias()
+      Admin.getPrazoOfflineDias(),
+      Admin.contarTurnosPorMotorista(),
+      Admin.getDiasAvisoVencimento()
     ]);
+    document.getElementById('input-dias-aviso').value = diasAviso;
 
     const ativos = motoristas.filter((m) => m.is_ativo);
     const pendentes = motoristas.filter((m) => !m.is_ativo);
@@ -566,22 +591,14 @@ async function carregarPainelAdmin() {
         const card = document.createElement('div');
         card.className = 'card-lsr p-3 flex items-center justify-between';
         card.innerHTML = `
-          <span class="text-white text-sm">${m.nome || 'Sem nome'}</span>
-          <button class="btn-aprovar text-sm font-semibold px-3 py-1 rounded-full" style="background-color:var(--lsr-green); color:#0a0a0a;" data-id="${m.id}">Aprovar</button>
+          <div>
+            <p class="text-white text-sm">${m.nome || 'Sem nome'}</p>
+            ${m.whatsapp ? `<p class="text-xs" style="color:var(--lsr-text-muted)">${m.whatsapp}</p>` : ''}
+          </div>
+          <button class="btn-aprovar-pendente text-sm font-semibold px-3 py-1 rounded-full" style="background-color:var(--lsr-green); color:#0a0a0a;" data-id="${m.id}">Aprovar</button>
         `;
-        card.querySelector('.btn-aprovar').addEventListener('click', async (e) => {
-          const btn = e.target;
-          btn.disabled = true;
-          btn.textContent = '...';
-          try {
-            await Admin.aprovarMotorista(m.id);
-            await carregarPainelAdmin();
-          } catch (err) {
-            console.error(err);
-            alert('Não foi possível aprovar. Verifique sua conexão.');
-            btn.disabled = false;
-            btn.textContent = 'Aprovar';
-          }
+        card.querySelector('.btn-aprovar-pendente').addEventListener('click', () => {
+          abrirModalPlano(m.id, m.nome, null, 'Aprovar');
         });
         containerPendentes.appendChild(card);
       });
@@ -592,17 +609,31 @@ async function carregarPainelAdmin() {
     containerTodos.innerHTML = '';
     motoristas.forEach((m) => {
       const card = document.createElement('div');
-      card.className = 'card-lsr p-3 flex items-center justify-between';
+      card.className = 'card-lsr p-3 flex flex-col gap-2';
       const statusCor = m.is_ativo ? 'var(--lsr-green)' : 'var(--lsr-red)';
       const statusTexto = m.is_ativo ? 'Ativo' : 'Bloqueado';
-      const acaoTexto = m.is_ativo ? 'Bloquear' : 'Aprovar';
+      const venc = formatarVencimento(m.plano_vencimento);
+      const totalTurnosMotorista = turnosPorMotorista[m.id] || 0;
+
       card.innerHTML = `
-        <div>
-          <p class="text-white text-sm">${m.nome || 'Sem nome'}</p>
-          <p class="text-xs" style="color:${statusCor}">${statusTexto}</p>
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-white text-sm font-semibold">${m.nome || 'Sem nome'}</p>
+            ${m.whatsapp ? `<p class="text-xs" style="color:var(--lsr-text-muted)">${m.whatsapp}</p>` : ''}
+          </div>
+          <span class="text-xs px-2 py-1 rounded-full" style="color:${statusCor}">${statusTexto}</span>
         </div>
-        <button class="btn-toggle-motorista text-sm font-semibold" style="color:${m.is_ativo ? 'var(--lsr-red)' : 'var(--lsr-green)'}" data-id="${m.id}" data-ativo="${m.is_ativo}">${acaoTexto}</button>
+        <div class="flex items-center justify-between text-xs" style="color:var(--lsr-text-muted)">
+          <span>${totalTurnosMotorista} turno(s)</span>
+          <span style="color:${venc.cor}">${m.plano ? m.plano.charAt(0).toUpperCase() + m.plano.slice(1) + ' · ' : ''}${venc.texto}</span>
+        </div>
+        <div class="flex gap-2 mt-1">
+          <button class="btn-toggle-motorista btn-lsr btn-lsr-outline flex-1 text-xs" style="min-height:38px;" data-id="${m.id}">${m.is_ativo ? 'Bloquear' : 'Liberar'}</button>
+          <button class="btn-renovar-motorista btn-lsr btn-lsr-outline flex-1 text-xs" style="min-height:38px;">Renovar</button>
+          <button class="btn-resetar-senha-motorista btn-lsr btn-lsr-outline flex-1 text-xs" style="min-height:38px;">🔑 Senha</button>
+        </div>
       `;
+
       card.querySelector('.btn-toggle-motorista').addEventListener('click', async (e) => {
         const btn = e.target;
         btn.disabled = true;
@@ -619,12 +650,92 @@ async function carregarPainelAdmin() {
           btn.disabled = false;
         }
       });
+
+      card.querySelector('.btn-renovar-motorista').addEventListener('click', () => {
+        abrirModalPlano(m.id, m.nome, m.plano_vencimento, 'Renovar');
+      });
+
+      card.querySelector('.btn-resetar-senha-motorista').addEventListener('click', () => {
+        abrirModalResetarSenha(m.id, m.nome);
+      });
+
       containerTodos.appendChild(card);
     });
   } catch (err) {
     console.error('[App] Erro ao carregar painel admin:', err);
     alert('Não foi possível carregar o painel. Verifique sua conexão.');
   }
+}
+
+// ------------------------------------------------------------
+// Modal: escolher plano (aprovar pendente ou renovar existente)
+// ------------------------------------------------------------
+function abrirModalPlano(motoristaId, nomeMotorista, vencimentoAtual, tituloAcao) {
+  motoristaEmContextoId = motoristaId;
+  document.getElementById('modal-plano-titulo').textContent = `${tituloAcao} motorista`;
+  document.getElementById('modal-plano-motorista-nome').textContent = nomeMotorista || '';
+  document.getElementById('modal-plano-motorista').dataset.vencimentoAtual = vencimentoAtual || '';
+  document.getElementById('modal-plano-motorista').classList.remove('hidden');
+}
+
+function fecharModalPlano() {
+  document.getElementById('modal-plano-motorista').classList.add('hidden');
+  motoristaEmContextoId = null;
+}
+
+// ------------------------------------------------------------
+// Modal: resetar senha
+// ------------------------------------------------------------
+function abrirModalResetarSenha(motoristaId, nomeMotorista) {
+  motoristaEmContextoId = motoristaId;
+  document.getElementById('modal-resetar-senha-nome').textContent = nomeMotorista || '';
+  document.getElementById('input-nova-senha').value = '';
+  esconderErro('erro-resetar-senha');
+  document.getElementById('modal-resetar-senha').classList.remove('hidden');
+}
+
+function fecharModalResetarSenha() {
+  document.getElementById('modal-resetar-senha').classList.add('hidden');
+  motoristaEmContextoId = null;
+}
+
+// ------------------------------------------------------------
+// Aviso de vencimento (lado do motorista, na home)
+// ------------------------------------------------------------
+async function atualizarAvisoVencimento() {
+  const banner = document.getElementById('aviso-vencimento');
+  const venc = perfilAtual?.plano_vencimento;
+
+  if (!venc) {
+    banner.classList.add('hidden');
+    return;
+  }
+
+  let diasAviso = 3;
+  try {
+    diasAviso = await Admin.getDiasAvisoVencimento();
+  } catch (err) {
+    // offline ou sem acesso — usa o padrão, não impede nada
+  }
+
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  const dataVenc = new Date(venc + 'T00:00:00');
+  const diasRestantes = Math.round((dataVenc - hoje) / (1000 * 60 * 60 * 24));
+
+  if (diasRestantes > diasAviso) {
+    banner.classList.add('hidden');
+    return;
+  }
+
+  const texto = diasRestantes < 0
+    ? `⚠️ Seu plano venceu há ${Math.abs(diasRestantes)} dia(s). Entre em contato para renovar.`
+    : diasRestantes === 0
+      ? '⚠️ Seu plano vence hoje. Entre em contato para renovar.'
+      : `⚠️ Seu plano vence em ${diasRestantes} dia(s). Entre em contato para renovar.`;
+
+  document.getElementById('aviso-vencimento-texto').textContent = texto;
+  banner.classList.remove('hidden');
 }
 
 // ------------------------------------------------------------
@@ -823,6 +934,7 @@ document.addEventListener('DOMContentLoaded', () => {
     esconderErro('erro-cadastro');
     const nomeUsuario = document.getElementById('cadastro-usuario').value.trim();
     const senha = document.getElementById('cadastro-senha').value;
+    const whatsapp = document.getElementById('cadastro-whatsapp').value.trim();
     const btn = document.getElementById('btn-cadastro');
 
     if (nomeUsuario.length < 3) {
@@ -833,11 +945,15 @@ document.addEventListener('DOMContentLoaded', () => {
       mostrarErro('erro-cadastro', 'A senha precisa ter no mínimo 6 caracteres.');
       return;
     }
+    if (whatsapp.length < 8) {
+      mostrarErro('erro-cadastro', 'Digite um número de WhatsApp válido.');
+      return;
+    }
 
     btn.disabled = true;
     btn.textContent = 'Criando conta...';
     try {
-      await Auth.cadastrar(nomeUsuario, senha);
+      await Auth.cadastrar(nomeUsuario, senha, whatsapp);
       mostrarErro('erro-cadastro', 'Conta criada! Aguarde a aprovação do administrador para poder entrar.');
       document.getElementById('erro-cadastro').style.color = 'var(--lsr-green)';
     } catch (err) {
@@ -1145,6 +1261,80 @@ document.addEventListener('DOMContentLoaded', () => {
       console.error(err);
     } finally {
       btn.disabled = false;
+    }
+  });
+
+  document.getElementById('btn-salvar-dias-aviso').addEventListener('click', async () => {
+    esconderErro('erro-dias-aviso');
+    const dias = parseInt(document.getElementById('input-dias-aviso').value, 10);
+
+    if (!dias || dias <= 0) {
+      mostrarErro('erro-dias-aviso', 'Digite um número de dias maior que zero.');
+      return;
+    }
+
+    const btn = document.getElementById('btn-salvar-dias-aviso');
+    btn.disabled = true;
+    try {
+      await Admin.atualizarDiasAvisoVencimento(dias);
+    } catch (err) {
+      mostrarErro('erro-dias-aviso', 'Não foi possível salvar. Verifique sua conexão.');
+      console.error(err);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  // Modal: escolher plano (aprovar/renovar)
+  document.getElementById('btn-cancelar-plano').addEventListener('click', fecharModalPlano);
+  document.querySelectorAll('.btn-escolher-plano').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const tipoPlano = btn.dataset.plano;
+      const vencimentoAtual = document.getElementById('modal-plano-motorista').dataset.vencimentoAtual || null;
+      const id = motoristaEmContextoId;
+      if (!id) return;
+
+      document.querySelectorAll('.btn-escolher-plano').forEach((b) => { b.disabled = true; });
+      try {
+        await Admin.aprovarComPlano(id, tipoPlano, vencimentoAtual);
+        fecharModalPlano();
+        await carregarPainelAdmin();
+      } catch (err) {
+        console.error(err);
+        alert('Não foi possível salvar o plano. Verifique sua conexão.');
+      } finally {
+        document.querySelectorAll('.btn-escolher-plano').forEach((b) => { b.disabled = false; });
+      }
+    });
+  });
+
+  // Modal: resetar senha
+  document.getElementById('btn-cancelar-resetar-senha').addEventListener('click', fecharModalResetarSenha);
+  document.getElementById('form-resetar-senha').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    esconderErro('erro-resetar-senha');
+    const novaSenha = document.getElementById('input-nova-senha').value;
+    const id = motoristaEmContextoId;
+
+    if (novaSenha.length < 6) {
+      mostrarErro('erro-resetar-senha', 'A senha precisa ter no mínimo 6 caracteres.');
+      return;
+    }
+    if (!id) return;
+
+    const btn = e.target.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.textContent = 'Resetando...';
+    try {
+      await Admin.resetarSenha(id, novaSenha);
+      fecharModalResetarSenha();
+      alert('Senha resetada com sucesso. Informe a nova senha ao motorista.');
+    } catch (err) {
+      console.error(err);
+      mostrarErro('erro-resetar-senha', err.message || 'Não foi possível resetar a senha.');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Resetar';
     }
   });
 
