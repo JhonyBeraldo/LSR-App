@@ -262,21 +262,66 @@
       <span class="font-bold text-white text-lg">Configurações</span>
     </header>
 
-    <main class="flex-1 px-5 pb-6 overflow-y-auto flex flex-col gap-5">
-
-      <!-- Planos -->
-      <div>
-        <div class="flex items-center justify-between mb-2">
-          <h2 class="text-sm font-semibold" style="color:var(--lsr-text-muted)">Planos</h2>
-          <button id="btn-novo-plano" class="text-xs px-3 py-1 rounded-full font-semibold" style="background-color:var(--lsr-green); color:#0a0a0a;">+ Novo plano</button>
+    <main class="flex-1 px-5 pb-6 overflow-y-auto flex flex-col gap-2">
+      <button id="btn-menu-planos" class="card-lsr p-4 flex items-center justify-between text-left">
+        <div>
+          <p class="text-white font-semibold">📋 Planos</p>
+          <p class="text-xs" style="color:var(--lsr-text-muted)">Criar, editar, ativar ou desativar planos</p>
         </div>
-        <div id="lista-planos-config" class="flex flex-col gap-2"></div>
-        <p id="planos-config-vazio" class="hidden text-sm text-center py-4" style="color:var(--lsr-text-muted)">Nenhum plano cadastrado ainda.</p>
-      </div>
+        <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
+      </button>
 
-      <!-- Tolerância offline -->
+      <button id="btn-menu-tolerancia" class="card-lsr p-4 flex items-center justify-between text-left">
+        <div>
+          <p class="text-white font-semibold">⏳ Tolerância offline</p>
+          <p class="text-xs" style="color:var(--lsr-text-muted)">Prazo de confiança sem internet</p>
+        </div>
+        <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
+      </button>
+
+      <button id="btn-menu-aviso" class="card-lsr p-4 flex items-center justify-between text-left">
+        <div>
+          <p class="text-white font-semibold">⚠️ Aviso de vencimento</p>
+          <p class="text-xs" style="color:var(--lsr-text-muted)">Antecedência do lembrete ao motorista</p>
+        </div>
+        <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
+      </button>
+
+      <button id="btn-menu-indicacao" class="card-lsr p-4 flex items-center justify-between text-left">
+        <div>
+          <p class="text-white font-semibold">🎁 Programa de indicação</p>
+          <p class="text-xs" style="color:var(--lsr-text-muted)">Regras de bônus e histórico</p>
+        </div>
+        <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
+      </button>
+    </main>
+  </div>
+
+  <!-- ---------------------------------------------------------- -->
+  <!-- SUBTELA: PLANOS -->
+  <!-- ---------------------------------------------------------- -->
+  <div id="tela-config-planos" class="tela hidden tela-cheia flex flex-col">
+    <header class="flex items-center gap-3 px-5 py-4">
+      <button class="btn-voltar-config-menu text-2xl leading-none" style="color:var(--lsr-text-muted)">←</button>
+      <span class="font-bold text-white text-lg">Planos</span>
+    </header>
+    <main class="flex-1 px-5 pb-6 overflow-y-auto">
+      <button id="btn-novo-plano" class="btn-lsr btn-lsr-primary w-full mb-4">+ Novo plano</button>
+      <div id="lista-planos-config" class="flex flex-col gap-2"></div>
+      <p id="planos-config-vazio" class="hidden text-sm text-center py-4" style="color:var(--lsr-text-muted)">Nenhum plano cadastrado ainda.</p>
+    </main>
+  </div>
+
+  <!-- ---------------------------------------------------------- -->
+  <!-- SUBTELA: TOLERÂNCIA OFFLINE -->
+  <!-- ---------------------------------------------------------- -->
+  <div id="tela-config-tolerancia" class="tela hidden tela-cheia flex flex-col">
+    <header class="flex items-center gap-3 px-5 py-4">
+      <button class="btn-voltar-config-menu text-2xl leading-none" style="color:var(--lsr-text-muted)">←</button>
+      <span class="font-bold text-white text-lg">Tolerância offline</span>
+    </header>
+    <main class="flex-1 px-5 pb-6 overflow-y-auto">
       <div class="card-lsr p-4">
-        <h2 class="text-sm font-semibold mb-1 text-white">Tolerância offline</h2>
         <p class="text-xs mb-3" style="color:var(--lsr-text-muted)">
           Quantos dias o app confia no último acesso aprovado, mesmo sem conexão pra confirmar de novo.
         </p>
@@ -286,10 +331,41 @@
         </div>
         <p id="erro-prazo-offline" class="hidden text-sm mt-2" style="color:var(--lsr-red)"></p>
       </div>
+    </main>
+  </div>
 
-      <!-- Programa de indicação -->
+  <!-- ---------------------------------------------------------- -->
+  <!-- SUBTELA: AVISO DE VENCIMENTO -->
+  <!-- ---------------------------------------------------------- -->
+  <div id="tela-config-aviso" class="tela hidden tela-cheia flex flex-col">
+    <header class="flex items-center gap-3 px-5 py-4">
+      <button class="btn-voltar-config-menu text-2xl leading-none" style="color:var(--lsr-text-muted)">←</button>
+      <span class="font-bold text-white text-lg">Aviso de vencimento</span>
+    </header>
+    <main class="flex-1 px-5 pb-6 overflow-y-auto">
       <div class="card-lsr p-4">
-        <h2 class="text-sm font-semibold mb-1 text-white">Programa de indicação</h2>
+        <p class="text-xs mb-3" style="color:var(--lsr-text-muted)">
+          Quantos dias antes do vencimento o motorista recebe o aviso no app pra renovar. Isso não bloqueia o acesso — só avisa.
+        </p>
+        <div class="flex gap-2">
+          <input type="number" min="1" step="1" id="input-dias-aviso" class="input-lsr flex-1" placeholder="3">
+          <button id="btn-salvar-dias-aviso" class="btn-lsr btn-lsr-primary px-5">Salvar</button>
+        </div>
+        <p id="erro-dias-aviso" class="hidden text-sm mt-2" style="color:var(--lsr-red)"></p>
+      </div>
+    </main>
+  </div>
+
+  <!-- ---------------------------------------------------------- -->
+  <!-- SUBTELA: PROGRAMA DE INDICAÇÃO -->
+  <!-- ---------------------------------------------------------- -->
+  <div id="tela-config-indicacao" class="tela hidden tela-cheia flex flex-col">
+    <header class="flex items-center gap-3 px-5 py-4">
+      <button class="btn-voltar-config-menu text-2xl leading-none" style="color:var(--lsr-text-muted)">←</button>
+      <span class="font-bold text-white text-lg">Programa de indicação</span>
+    </header>
+    <main class="flex-1 px-5 pb-6 overflow-y-auto flex flex-col gap-5">
+      <div class="card-lsr p-4">
         <p class="text-xs mb-3" style="color:var(--lsr-text-muted)">
           Quando o indicado fecha um plano com duração mínima abaixo, o indicador ganha dias grátis automaticamente.
         </p>
@@ -307,26 +383,11 @@
         <p id="erro-config-indicacao" class="hidden text-sm mt-2" style="color:var(--lsr-red)"></p>
       </div>
 
-      <!-- Indicações recompensadas -->
       <div>
         <h2 class="text-sm font-semibold mb-2" style="color:var(--lsr-text-muted)">Indicações recompensadas</h2>
         <div id="lista-indicacoes" class="flex flex-col gap-2"></div>
         <p id="indicacoes-vazio" class="hidden text-sm text-center py-3" style="color:var(--lsr-text-muted)">Nenhuma indicação recompensada ainda.</p>
       </div>
-
-      <!-- Aviso de vencimento -->
-      <div class="card-lsr p-4">
-        <h2 class="text-sm font-semibold mb-1 text-white">Aviso de vencimento</h2>
-        <p class="text-xs mb-3" style="color:var(--lsr-text-muted)">
-          Quantos dias antes do vencimento o motorista recebe o aviso no app pra renovar. Isso não bloqueia o acesso — só avisa.
-        </p>
-        <div class="flex gap-2">
-          <input type="number" min="1" step="1" id="input-dias-aviso" class="input-lsr flex-1" placeholder="3">
-          <button id="btn-salvar-dias-aviso" class="btn-lsr btn-lsr-primary px-5">Salvar</button>
-        </div>
-        <p id="erro-dias-aviso" class="hidden text-sm mt-2" style="color:var(--lsr-red)"></p>
-      </div>
-
     </main>
   </div>
 
