@@ -288,6 +288,44 @@ const Admin = {
   },
 
   // ------------------------------------------------------------
+  // GUIA DE AJUDA (editável pelo master, lido pelo motorista)
+  // ------------------------------------------------------------
+  async listarConteudoAjuda() {
+    const { data, error } = await supabaseClient
+      .from('conteudo_ajuda')
+      .select('*')
+      .order('ordem', { ascending: true });
+    if (error) throw error;
+    return data || [];
+  },
+
+  async criarConteudoAjuda({ titulo, corpo, ordem }) {
+    const { data, error } = await supabaseClient
+      .from('conteudo_ajuda')
+      .insert({ titulo, corpo, ordem })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async atualizarConteudoAjuda(id, { titulo, corpo, ordem }) {
+    const { data, error } = await supabaseClient
+      .from('conteudo_ajuda')
+      .update({ titulo, corpo, ordem })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async excluirConteudoAjuda(id) {
+    const { error } = await supabaseClient.from('conteudo_ajuda').delete().eq('id', id);
+    if (error) throw error;
+  },
+
+  // ------------------------------------------------------------
   // RESET DE SENHA (via Edge Function — precisa de deploy separado,
   // veja as instruções que acompanham este arquivo)
   // ------------------------------------------------------------

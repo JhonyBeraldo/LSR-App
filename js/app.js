@@ -1474,6 +1474,100 @@ async function carregarConfigAviso() {
   }
 }
 
+// ------------------------------------------------------------
+// Guia de Ajuda (painel master: gerenciar / motorista: ler)
+// ------------------------------------------------------------
+let blocoAjudaEmEdicaoId = null;
+
+async function carregarConfigAjuda() {
+  try {
+    const blocos = await Admin.listarConteudoAjuda();
+    const container = document.getElementById('lista-ajuda-config');
+    const vazio = document.getElementById('ajuda-config-vazio');
+    container.innerHTML = '';
+
+    if (!blocos.length) {
+      vazio.classList.remove('hidden');
+      return;
+    }
+    vazio.classList.add('hidden');
+
+    blocos.forEach((b) => {
+      const card = document.createElement('div');
+      card.className = 'card-lsr p-3 flex items-center justify-between cursor-pointer';
+      card.innerHTML = `
+        <div>
+          <p class="text-white text-sm font-semibold">${escapeHtml(b.titulo)}</p>
+          <p class="text-xs" style="color:var(--lsr-text-muted)">Ordem ${b.ordem}</p>
+        </div>
+        <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
+      `;
+      card.addEventListener('click', () => abrirModalBlocoAjuda(b));
+      container.appendChild(card);
+    });
+  } catch (err) {
+    console.error('[App] Erro ao carregar guia de ajuda:', err);
+    alert('Não foi possível carregar. Verifique sua conexão.');
+  }
+}
+
+function abrirModalBlocoAjuda(blocoExistente) {
+  esconderErro('erro-bloco-ajuda');
+  blocoAjudaEmEdicaoId = blocoExistente ? blocoExistente.id : null;
+
+  document.getElementById('modal-bloco-ajuda-titulo').textContent = blocoExistente ? 'Editar bloco' : 'Novo bloco';
+  document.getElementById('bloco-ajuda-id').value = blocoExistente ? blocoExistente.id : '';
+  document.getElementById('bloco-ajuda-titulo-input').value = blocoExistente ? blocoExistente.titulo : '';
+  document.getElementById('bloco-ajuda-corpo-input').value = blocoExistente ? blocoExistente.corpo : '';
+  document.getElementById('bloco-ajuda-ordem-input').value = blocoExistente ? blocoExistente.ordem : '';
+
+  const btnExcluir = document.getElementById('btn-excluir-bloco-ajuda');
+  if (blocoExistente) {
+    btnExcluir.classList.remove('hidden');
+    btnExcluir.onclick = async () => {
+      if (!confirm('Excluir esse bloco do guia de ajuda?')) return;
+      try {
+        await Admin.excluirConteudoAjuda(blocoExistente.id);
+        fecharModalBlocoAjuda();
+        await carregarConfigAjuda();
+      } catch (err) {
+        console.error(err);
+        alert('Não foi possível excluir. Verifique sua conexão.');
+      }
+    };
+  } else {
+    btnExcluir.classList.add('hidden');
+  }
+
+  document.getElementById('modal-bloco-ajuda').classList.remove('hidden');
+}
+
+function fecharModalBlocoAjuda() {
+  document.getElementById('modal-bloco-ajuda').classList.add('hidden');
+  blocoAjudaEmEdicaoId = null;
+}
+
+async function carregarAjudaMotorista() {
+  const container = document.getElementById('lista-ajuda-motorista');
+  container.innerHTML = '<p class="text-sm text-center py-4" style="color:var(--lsr-text-muted)">Carregando...</p>';
+  try {
+    const blocos = await Admin.listarConteudoAjuda();
+    container.innerHTML = '';
+    blocos.forEach((b) => {
+      const card = document.createElement('div');
+      card.className = 'card-lsr p-4';
+      card.innerHTML = `
+        <p class="text-white font-semibold mb-2">${escapeHtml(b.titulo)}</p>
+        <p class="text-sm" style="color:var(--lsr-text-legivel); white-space:pre-line; line-height:1.6;">${escapeHtml(b.corpo)}</p>
+      `;
+      container.appendChild(card);
+    });
+  } catch (err) {
+    console.error(err);
+    container.innerHTML = '<p class="text-sm text-center py-4" style="color:var(--lsr-red)">Não foi possível carregar. Verifique sua conexão.</p>';
+  }
+}
+
 async function carregarConfigWhatsapp() {
   try {
     const valor = await Auth.getConfig('whatsapp_suporte');
@@ -2374,6 +2468,54 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-menu-whatsapp-suporte').addEventListener('click', () => {
     mostrarTela('tela-config-whatsapp');
     carregarConfigWhatsapp();
+  });
+  document.getElementById('btn-menu-guia-ajuda').addEventListener('click', () => {
+    mostrarTela('tela-config-ajuda');
+    carregarConfigAjuda();
+  });
+
+  document.getElementById('btn-novo-bloco-ajuda').addEventListener('click', () => abrirModalBlocoAjuda(null));
+  document.getElementById('btn-fechar-modal-bloco-ajuda').addEventListener('click', fecharModalBlocoAjuda);
+
+  document.getElementById('form-bloco-ajuda').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    esconderErro('erro-bloco-ajuda');
+
+    const titulo = document.getElementById('bloco-ajuda-titulo-input').value.trim();
+    const corpo = document.getElementById('bloco-ajuda-corpo-input').value.trim();
+    const ordem = parseInt(document.getElementById('bloco-ajuda-ordem-input').value, 10) || 0;
+
+    if (!titulo || !corpo) {
+      mostrarErro('erro-bloco-ajuda', 'Preencha título e texto.');
+      return;
+    }
+
+    const btn = e.target.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.textContent = 'Salvando...';
+    try {
+      if (blocoAjudaEmEdicaoId) {
+        await Admin.atualizarConteudoAjuda(blocoAjudaEmEdicaoId, { titulo, corpo, ordem });
+      } else {
+        await Admin.criarConteudoAjuda({ titulo, corpo, ordem });
+      }
+      fecharModalBlocoAjuda();
+      await carregarConfigAjuda();
+    } catch (err) {
+      mostrarErro('erro-bloco-ajuda', 'Não foi possível salvar. Verifique sua conexão.');
+      console.error(err);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Salvar bloco';
+    }
+  });
+
+  document.getElementById('btn-ir-ajuda-motorista').addEventListener('click', () => {
+    mostrarTela('tela-ajuda-motorista');
+    carregarAjudaMotorista();
+  });
+  document.getElementById('btn-voltar-config-ajuda').addEventListener('click', () => {
+    mostrarTela('tela-config-motorista');
   });
 
   document.querySelectorAll('.btn-voltar-config-menu').forEach((btn) => {
