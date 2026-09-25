@@ -294,6 +294,13 @@
           </span>
           <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
         </button>
+        <button id="btn-ir-ajuda-motorista" class="card-lsr p-4 flex items-center justify-between text-left">
+          <span class="flex items-center gap-2.5">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--lsr-text-muted)" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 1.5-2 2-2 3.5M12 17h.01"/></svg>
+            <span class="text-white text-sm">Como usar o app</span>
+          </span>
+          <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
+        </button>
       </div>
 
       <button id="btn-logout" class="mt-2" style="background:transparent;border:none;padding:16px 0 8px;text-align:center;">
@@ -411,6 +418,14 @@
         </div>
         <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
       </button>
+
+      <button id="btn-menu-guia-ajuda" class="card-lsr p-4 flex items-center justify-between text-left">
+        <div>
+          <p class="text-white font-semibold">📖 Guia de Ajuda</p>
+          <p class="text-xs" style="color:var(--lsr-text-muted)">Textos do "Como usar" que o motorista vê</p>
+        </div>
+        <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
+      </button>
     </main>
   </div>
 
@@ -470,6 +485,21 @@
         </div>
         <p id="erro-dias-aviso" class="hidden text-sm mt-2" style="color:var(--lsr-red)"></p>
       </div>
+    </main>
+  </div>
+
+  <!-- ---------------------------------------------------------- -->
+  <!-- SUBTELA: GUIA DE AJUDA -->
+  <!-- ---------------------------------------------------------- -->
+  <div id="tela-config-ajuda" class="tela hidden tela-cheia flex flex-col">
+    <header class="flex items-center gap-3 px-5 py-4">
+      <button class="btn-voltar-config-menu text-2xl leading-none" style="color:var(--lsr-text-muted)">←</button>
+      <span class="font-bold text-white text-lg">Guia de Ajuda</span>
+    </header>
+    <main class="flex-1 px-5 pb-6 overflow-y-auto">
+      <button id="btn-novo-bloco-ajuda" class="btn-lsr btn-lsr-primary w-full mb-4">+ Novo bloco</button>
+      <div id="lista-ajuda-config" class="flex flex-col gap-2"></div>
+      <p id="ajuda-config-vazio" class="hidden text-sm text-center py-4" style="color:var(--lsr-text-muted)">Nenhum bloco cadastrado ainda.</p>
     </main>
   </div>
 
@@ -688,6 +718,19 @@
       </div>
 
       <p id="relatorio-vazio" class="hidden text-sm text-center py-4" style="color:var(--lsr-text-muted)">Nenhum turno fechado nesse período.</p>
+    </main>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- TELA: COMO USAR O APP (leitura) -->
+  <!-- ============================================================ -->
+  <div id="tela-ajuda-motorista" class="tela hidden tela-cheia flex flex-col">
+    <header class="flex items-center gap-3 px-5 py-4">
+      <button id="btn-voltar-config-ajuda" class="text-2xl leading-none" style="color:var(--lsr-text-muted)">←</button>
+      <span class="font-bold text-white text-lg">Como usar o app</span>
+    </header>
+    <main class="flex-1 px-5 pb-6 overflow-y-auto flex flex-col gap-3">
+      <div id="lista-ajuda-motorista" class="flex flex-col gap-3"></div>
     </main>
   </div>
 
@@ -952,6 +995,39 @@
         <button id="btn-esquecido-preencher" class="btn-lsr btn-lsr-primary w-full">Preencher dados de fechamento</button>
         <button id="btn-esquecido-descartar" class="btn-lsr btn-lsr-outline w-full">Descartar turno (cliquei sem querer)</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- MODAL: CADASTRAR/EDITAR BLOCO DO GUIA DE AJUDA -->
+  <!-- ============================================================ -->
+  <div id="modal-bloco-ajuda" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center" style="background-color: rgba(0,0,0,0.6);">
+    <div class="card-lsr w-full sm:max-w-sm p-6 max-h-[90vh] overflow-y-auto" style="border-radius: 20px 20px 0 0;">
+      <div class="flex items-center justify-between mb-4">
+        <h2 id="modal-bloco-ajuda-titulo" class="text-lg font-bold text-white">Novo bloco</h2>
+        <button id="btn-fechar-modal-bloco-ajuda" class="text-2xl leading-none" style="color:var(--lsr-text-muted)">×</button>
+      </div>
+
+      <form id="form-bloco-ajuda" class="flex flex-col gap-4">
+        <input type="hidden" id="bloco-ajuda-id">
+        <div>
+          <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">Título</label>
+          <input type="text" id="bloco-ajuda-titulo-input" required class="input-lsr w-full" placeholder="Ex: Como funciona o Cofre">
+        </div>
+        <div>
+          <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">Texto</label>
+          <textarea id="bloco-ajuda-corpo-input" required rows="6" class="input-lsr w-full" style="padding-top:10px;" placeholder="Explique aqui, em linguagem simples..."></textarea>
+        </div>
+        <div>
+          <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">Ordem de exibição</label>
+          <input type="number" id="bloco-ajuda-ordem-input" min="1" step="1" class="input-lsr w-full" placeholder="1">
+        </div>
+
+        <p id="erro-bloco-ajuda" class="hidden text-sm" style="color:var(--lsr-red)"></p>
+
+        <button type="submit" class="btn-lsr btn-lsr-primary w-full mt-2">Salvar bloco</button>
+        <button type="button" id="btn-excluir-bloco-ajuda" class="hidden btn-lsr btn-lsr-outline w-full" style="color:var(--lsr-red); border-color:var(--lsr-red);">Excluir bloco</button>
+      </form>
     </div>
   </div>
 
