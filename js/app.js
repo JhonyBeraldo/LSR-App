@@ -1100,7 +1100,13 @@ async function abrirWhatsAppSuporte() {
   }
   numero = numero.replace(/\D/g, '');
   if (numero.length <= 11) numero = '55' + numero;
-  window.open(`https://wa.me/${numero}`, '_blank');
+
+  // IMPORTANTE: navega na MESMA aba/janela (não abre uma nova com
+  // window.open). Um app instalado (PWA) que abre nova aba pra um link
+  // wa.me acaba com uma aba em branco "fantasma" depois que o iOS troca
+  // pro app do WhatsApp — o próprio sistema já intercepta esse link e
+  // devolve o usuário pro app normalmente, sem precisar de aba nenhuma.
+  window.location.href = `https://wa.me/${numero}`;
 }
 
 function abrirWhatsAppLembrete(whatsapp, nome, dias) {
@@ -1119,7 +1125,7 @@ function abrirWhatsAppLembrete(whatsapp, nome, dias) {
     mensagem = `Olá ${nome}! Seu plano do LSR App vence em ${dias} dia(s). Vamos renovar pra você continuar usando sem interrupções?`;
   }
 
-  window.open(`https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`, '_blank');
+  window.location.href = `https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`;
 }
 
 function formatarVencimento(dataISO) {
