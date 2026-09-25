@@ -133,11 +133,17 @@ const Auth = {
    * definiu a senha nova dele.
    */
   async limparSenhaTemporaria(userId) {
-    const { error } = await supabaseClient
+    const { data, error } = await supabaseClient
       .from('perfis')
       .update({ senha_temporaria: false })
-      .eq('id', userId);
+      .eq('id', userId)
+      .select();
     if (error) throw error;
+    // Um UPDATE que não bate com nenhuma linha não gera erro sozinho —
+    // precisa checar manualmente (mesmo cuidado que já tomamos em turnos.js).
+    if (!Array.isArray(data) || data.length === 0) {
+      throw new Error('Nenhuma linha atualizada ao limpar a senha temporária.');
+    }
   },
 
   /**

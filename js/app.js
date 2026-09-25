@@ -37,6 +37,23 @@ function lerCodigoIndicacaoCache() {
   try { return localStorage.getItem(REF_CACHE_KEY); } catch (e) { return null; }
 }
 
+/**
+ * Neutraliza caracteres HTML perigosos antes de inserir texto vindo do
+ * usuário (nome, WhatsApp, descrição de despesa, nome de veículo etc.)
+ * em qualquer innerHTML. Sem isso, alguém poderia se cadastrar com um
+ * nome contendo código e executá-lo no navegador de quem visualizar
+ * esse dado depois (inclusive o master, ao abrir o painel).
+ */
+function escapeHtml(valor) {
+  if (valor === null || valor === undefined) return '';
+  return String(valor)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // ------------------------------------------------------------
 // Indicador de conectividade + status de sincronização
 // ------------------------------------------------------------
@@ -296,7 +313,7 @@ async function carregarListaVeiculos() {
         <div class="flex items-center gap-3">
           <span class="text-2xl">${iconeTipoVeiculo(v.tipo)}</span>
           <div>
-            <p class="text-white font-semibold">${v.nome_modelo}</p>
+            <p class="text-white font-semibold">${escapeHtml(v.nome_modelo)}</p>
             <p class="text-xs" style="color:var(--lsr-text-muted)">
               ${v.autonomia_kml} km/l · Manut. R$ ${Number(v.taxa_manutencao_km).toFixed(4)}/km · Depr. R$ ${Number(v.taxa_depreciacao_km).toFixed(4)}/km
             </p>
@@ -573,8 +590,8 @@ async function carregarDespesas() {
       item.className = 'card-lsr p-3 flex items-center justify-between';
       item.innerHTML = `
         <div>
-          <p class="text-white text-sm font-semibold">${d.descricao || 'Despesa de manutenção'}</p>
-          <p class="text-xs" style="color:var(--lsr-text-muted)">${v ? v.nome_modelo : 'Veículo'} · ${formatarDataBR(d.data_despesa)}</p>
+          <p class="text-white text-sm font-semibold">${escapeHtml(d.descricao) || 'Despesa de manutenção'}</p>
+          <p class="text-xs" style="color:var(--lsr-text-muted)">${v ? escapeHtml(v.nome_modelo) : 'Veículo'} · ${formatarDataBR(d.data_despesa)}</p>
         </div>
         <div class="flex items-center gap-3">
           <span class="font-bold" style="color:var(--lsr-red)">${formatarMoeda(d.valor)}</span>
@@ -773,7 +790,7 @@ function exibirRelatorio(r) {
     const linha = document.createElement('div');
     linha.className = 'flex justify-between text-xs';
     linha.innerHTML = `
-      <span style="color:var(--lsr-text-muted)">${d.descricao} · ${d.veiculoNome} · ${formatarDataBR(d.data)}</span>
+      <span style="color:var(--lsr-text-muted)">${escapeHtml(d.descricao)} · ${escapeHtml(d.veiculoNome)} · ${formatarDataBR(d.data)}</span>
       <span style="color:var(--lsr-red)">${formatarMoeda(d.valor)}</span>
     `;
     containerDespesas.appendChild(linha);
@@ -1217,8 +1234,8 @@ async function carregarPainelAdmin() {
         card.className = 'card-lsr p-3 flex items-center justify-between';
         card.innerHTML = `
           <div>
-            <p class="text-white text-sm">${m.nome || 'Sem nome'}</p>
-            ${m.whatsapp ? `<p class="text-xs" style="color:var(--lsr-text-muted)">${m.whatsapp}</p>` : ''}
+            <p class="text-white text-sm">${escapeHtml(m.nome) || 'Sem nome'}</p>
+            ${m.whatsapp ? `<p class="text-xs" style="color:var(--lsr-text-muted)">${escapeHtml(m.whatsapp)}</p>` : ''}
           </div>
           <button class="btn-aprovar-pendente text-sm font-semibold px-3 py-1 rounded-full" style="background-color:var(--lsr-green); color:#0a0a0a;" data-id="${m.id}">Aprovar</button>
         `;
@@ -1279,7 +1296,7 @@ function renderizarListaMotoristas() {
     card.style.borderLeft = `4px solid ${corBorda}`;
     card.innerHTML = `
       <div>
-        <p class="text-white text-sm font-semibold">${m.nome || 'Sem nome'}</p>
+        <p class="text-white text-sm font-semibold">${escapeHtml(m.nome) || 'Sem nome'}</p>
         <p class="text-xs" style="color:${statusCor}">${statusTexto}</p>
       </div>
       <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
@@ -1374,7 +1391,7 @@ async function carregarConfigPlanos() {
       card.style.opacity = p.is_ativo ? '1' : '0.5';
       card.innerHTML = `
         <div>
-          <p class="text-white text-sm font-semibold">${p.nome}</p>
+          <p class="text-white text-sm font-semibold">${escapeHtml(p.nome)}</p>
           <p class="text-xs" style="color:var(--lsr-text-muted)">${p.dias_duracao} dias · ${p.valor > 0 ? formatarMoeda(p.valor) : 'Grátis'}${!p.is_ativo ? ' · Inativo' : ''}</p>
         </div>
         <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
@@ -1436,7 +1453,7 @@ async function carregarConfigIndicacao() {
       const item = document.createElement('div');
       item.className = 'card-lsr p-3';
       item.innerHTML = `
-        <p class="text-sm text-white"><strong>${r.indicadorNome}</strong> indicou <strong>${r.indicadoNome}</strong></p>
+        <p class="text-sm text-white"><strong>${escapeHtml(r.indicadorNome)}</strong> indicou <strong>${escapeHtml(r.indicadoNome)}</strong></p>
         <p class="text-xs" style="color:var(--lsr-green)">+${r.dias_bonus_concedidos} dias de bônus · ${formatarDataBR(r.created_at.slice(0, 10))}</p>
       `;
       container.appendChild(item);
@@ -1513,7 +1530,7 @@ async function abrirModalPlano(motoristaId, nomeMotorista, vencimentoAtual, titu
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'btn-lsr btn-lsr-outline w-full justify-between px-4';
-      btn.innerHTML = `<span>${p.nome}</span><span style="color:var(--lsr-text-muted)">${p.valor > 0 ? formatarMoeda(p.valor) : 'Grátis'} · ${p.dias_duracao}d</span>`;
+      btn.innerHTML = `<span>${escapeHtml(p.nome)}</span><span style="color:var(--lsr-text-muted)">${p.valor > 0 ? formatarMoeda(p.valor) : 'Grátis'} · ${p.dias_duracao}d</span>`;
       btn.addEventListener('click', async () => {
         container.querySelectorAll('button').forEach((b) => { b.disabled = true; });
         try {
@@ -1630,7 +1647,7 @@ async function carregarHistorico() {
   container.innerHTML = '';
   turnos.forEach((t) => {
     const veiculo = veiculosMap[t.veiculo_id];
-    const nomeVeiculo = veiculo ? `${iconeTipoVeiculo(veiculo.tipo)} ${veiculo.nome_modelo}` : 'Veículo';
+    const nomeVeiculo = veiculo ? `${iconeTipoVeiculo(veiculo.tipo)} ${escapeHtml(veiculo.nome_modelo)}` : 'Veículo';
     const card = document.createElement('div');
 
     if (t.status === 'fechado') {
