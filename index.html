@@ -243,33 +243,61 @@
       <span class="font-bold text-white text-lg">Configurações</span>
     </header>
 
-    <main class="flex-1 px-5 pb-6 overflow-y-auto flex flex-col gap-2">
-      <button id="btn-ir-relatorio" class="card-lsr p-4 flex items-center justify-between text-left">
-        <span class="text-white font-semibold">📊 Relatório Financeiro</span>
-        <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
-      </button>
-      <button id="btn-indicar-amigo" class="card-lsr p-4 flex items-center justify-between text-left">
-        <span class="text-white font-semibold">🎁 Indicar amigo</span>
-        <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
-      </button>
-      <button id="btn-ir-historico" class="card-lsr p-4 flex items-center justify-between text-left">
-        <span class="text-white font-semibold">📋 Histórico</span>
-        <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
-      </button>
-      <button id="btn-ir-veiculos" class="card-lsr p-4 flex items-center justify-between text-left">
-        <span class="text-white font-semibold">🚗 Meus Veículos</span>
-        <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
-      </button>
-      <button id="btn-whatsapp-suporte-motorista" class="card-lsr p-4 flex items-center justify-between text-left">
-        <span class="text-white font-semibold flex items-center gap-2">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="#25D366"><path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.37 5.07L2 22l5.06-1.33A9.94 9.94 0 0 0 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm5.2 14.2c-.22.62-1.28 1.2-1.77 1.24-.45.04-.9.22-3.02-.63-2.56-1.02-4.2-3.62-4.33-3.79-.13-.17-1.03-1.37-1.03-2.62 0-1.24.65-1.85.89-2.1.22-.24.48-.3.64-.3.16 0 .32 0 .46.01.15.01.35-.06.55.42.2.48.68 1.66.74 1.78.06.12.1.27.02.44-.08.17-.12.27-.24.42-.12.14-.25.31-.36.42-.12.12-.25.25-.11.49.15.24.65 1.07 1.39 1.73.96.85 1.76 1.12 2.01 1.24.25.12.4.1.55-.06.15-.16.63-.73.8-.98.17-.25.34-.2.57-.12.24.08 1.5.71 1.76.84.26.13.43.19.5.3.06.11.06.62-.16 1.24z"/></svg>
-          Falar com o suporte
-        </span>
-        <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
-      </button>
-      <button id="btn-logout" class="card-lsr p-4 flex items-center justify-between text-left mt-4">
-        <span class="font-semibold" style="color:var(--lsr-red)">Sair</span>
-        <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
+    <main class="flex-1 px-5 pb-6 overflow-y-auto flex flex-col gap-4">
+
+      <div class="flex flex-col gap-2">
+        <span class="text-xs pl-0.5" style="color:#6a6a6a">Financeiro</span>
+        <button id="btn-ir-relatorio" class="p-4 flex items-center justify-between text-left" style="background:#1c1c1c;border:1px solid rgba(0,230,118,0.3);border-radius:12px;">
+          <span class="flex items-center gap-2.5">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--lsr-green)" stroke-width="2"><path d="M4 20V10M12 20V4M20 20v-7"/></svg>
+            <span class="text-white font-semibold text-sm">Relatório financeiro</span>
+          </span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--lsr-green)" stroke-width="2.5"><path d="M9 6l6 6-6 6"/></svg>
+        </button>
+      </div>
+
+      <div class="flex flex-col gap-2">
+        <span class="text-xs pl-0.5" style="color:#6a6a6a">Rede</span>
+        <button id="btn-indicar-amigo" class="card-lsr p-4 flex items-center justify-between text-left">
+          <span class="flex items-center gap-2.5">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--lsr-text-muted)" stroke-width="2"><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6M12 15V3m0 0l4 4m-4-4L8 7"/></svg>
+            <span class="text-white text-sm">Indicar amigo</span>
+          </span>
+          <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
+        </button>
+      </div>
+
+      <div class="flex flex-col gap-2">
+        <span class="text-xs pl-0.5" style="color:#6a6a6a">Histórico</span>
+        <button id="btn-ir-historico" class="card-lsr p-4 flex items-center justify-between text-left">
+          <span class="flex items-center gap-2.5">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--lsr-text-muted)" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+            <span class="text-white text-sm">Turnos fechados</span>
+          </span>
+          <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
+        </button>
+        <button id="btn-ir-veiculos" class="card-lsr p-4 flex items-center justify-between text-left">
+          <span class="flex items-center gap-2.5">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--lsr-text-muted)" stroke-width="2"><path d="M5 17h14M6 17l1.5-6h9L18 17M9 11V7h6v4"/></svg>
+            <span class="text-white text-sm">Meus veículos</span>
+          </span>
+          <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
+        </button>
+      </div>
+
+      <div class="flex flex-col gap-2">
+        <span class="text-xs pl-0.5" style="color:#6a6a6a">Ajuda</span>
+        <button id="btn-whatsapp-suporte-motorista" class="card-lsr p-4 flex items-center justify-between text-left">
+          <span class="flex items-center gap-2.5">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="#25D366"><path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.37 5.07L2 22l5.06-1.33A9.94 9.94 0 0 0 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm5.2 14.2c-.22.62-1.28 1.2-1.77 1.24-.45.04-.9.22-3.02-.63-2.56-1.02-4.2-3.62-4.33-3.79-.13-.17-1.03-1.37-1.03-2.62 0-1.24.65-1.85.89-2.1.22-.24.48-.3.64-.3.16 0 .32 0 .46.01.15.01.35-.06.55.42.2.48.68 1.66.74 1.78.06.12.1.27.02.44-.08.17-.12.27-.24.42-.12.14-.25.31-.36.42-.12.12-.25.25-.11.49.15.24.65 1.07 1.39 1.73.96.85 1.76 1.12 2.01 1.24.25.12.4.1.55-.06.15-.16.63-.73.8-.98.17-.25.34-.2.57-.12.24.08 1.5.71 1.76.84.26.13.43.19.5.3.06.11.06.62-.16 1.24z"/></svg>
+            <span class="text-white text-sm">Falar com o suporte</span>
+          </span>
+          <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
+        </button>
+      </div>
+
+      <button id="btn-logout" class="mt-2" style="background:transparent;border:none;padding:16px 0 8px;text-align:center;">
+        <span class="font-semibold text-sm" style="color:var(--lsr-red)">Sair da conta</span>
       </button>
     </main>
   </div>
