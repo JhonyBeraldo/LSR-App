@@ -336,6 +336,11 @@
         </div>
       </div>
 
+      <button id="btn-compartilhar-cadastro" class="btn-lsr btn-lsr-outline w-full gap-2">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="12" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><path d="M8.6 10.5l6.8-3.8M8.6 13.5l6.8 3.8"/></svg>
+        Compartilhar link de cadastro
+      </button>
+
       <!-- Pendentes de aprovação -->
       <div>
         <h2 class="text-sm font-semibold mb-2" style="color:var(--lsr-text-muted)">⏳ Pendentes de aprovação</h2>
@@ -946,6 +951,27 @@
       <div class="flex flex-col gap-3">
         <button id="btn-esquecido-preencher" class="btn-lsr btn-lsr-primary w-full">Preencher dados de fechamento</button>
         <button id="btn-esquecido-descartar" class="btn-lsr btn-lsr-outline w-full">Descartar turno (cliquei sem querer)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- MODAL: COMPARTILHAR LINK DE CADASTRO (master) -->
+  <!-- ============================================================ -->
+  <div id="modal-compartilhar-cadastro" class="hidden fixed inset-0 z-50 flex items-center justify-center px-6" style="background-color: rgba(0,0,0,0.6);">
+    <div class="card-lsr w-full sm:max-w-sm p-6 text-center">
+      <div class="text-4xl mb-3">🔗</div>
+      <h2 class="text-lg font-bold text-white mb-2">Link de cadastro</h2>
+      <p class="text-sm mb-4" style="color:var(--lsr-text-muted)">
+        Compartilhe esse link com novos motoristas — ele já abre direto na tela de criar conta.
+      </p>
+      <div class="input-lsr w-full flex items-center px-3 mb-4" style="min-height:48px;">
+        <span id="texto-link-cadastro" class="text-xs text-white break-all text-left flex-1"></span>
+      </div>
+      <div class="flex flex-col gap-2">
+        <button id="btn-compartilhar-link-cadastro" class="btn-lsr btn-lsr-primary w-full">Compartilhar link</button>
+        <button id="btn-copiar-link-cadastro" class="btn-lsr btn-lsr-outline w-full">Copiar link</button>
+        <button id="btn-fechar-compartilhar-cadastro" class="btn-lsr btn-lsr-outline w-full">Fechar</button>
       </div>
     </div>
   </div>
