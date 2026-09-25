@@ -1883,6 +1883,11 @@ document.addEventListener('DOMContentLoaded', () => {
       try { localStorage.removeItem(REF_CACHE_KEY); } catch (e) {}
       mostrarErro('erro-cadastro', 'Conta criada! O administrador vai entrar em contato pelo WhatsApp cadastrado. Se preferir, também pode chamar o suporte.');
       document.getElementById('erro-cadastro').style.color = 'var(--lsr-green)';
+
+      // Avisa o master no WhatsApp — melhor esforço, nunca trava o cadastro
+      // se falhar (ex: sem internet, CallMeBot fora do ar, etc.)
+      supabaseClient.functions.invoke('notificar-cadastro', { body: { nome: nomeUsuario, whatsapp } })
+        .catch((e) => console.warn('[App] Não foi possível notificar o master do novo cadastro:', e));
     } catch (err) {
       const jaExiste = (err.message || '').toLowerCase().includes('already') || (err.message || '').toLowerCase().includes('registered');
       if (jaExiste) {
