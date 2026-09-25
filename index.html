@@ -55,7 +55,7 @@
 
         <p id="erro-login" class="hidden text-sm" style="color:var(--lsr-red)"></p>
 
-        <button type="submit" id="btn-login" class="btn-lsr btn-lsr-primary w-full mt-2">Entrar</button>
+        <button type="submit" id="btn-login" class="btn-lsr btn-hero-iniciar w-full mt-2">Entrar</button>
 
         <p class="text-center text-sm mt-2" style="color:var(--lsr-text-muted)">
           Não tem conta?
@@ -63,7 +63,10 @@
         </p>
       </form>
 
-      <button id="btn-whatsapp-suporte-login" class="btn-lsr w-full mt-4" style="background-color:#25D366; color:#0a0a0a;">📞 Falar com o suporte</button>
+      <button id="btn-whatsapp-suporte-login" class="btn-lsr w-full mt-4 gap-2" style="background-color:transparent; border:1.5px solid #25D366; color:#25D366;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="#25D366"><path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.37 5.07L2 22l5.06-1.33A9.94 9.94 0 0 0 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm5.2 14.2c-.22.62-1.28 1.2-1.77 1.24-.45.04-.9.22-3.02-.63-2.56-1.02-4.2-3.62-4.33-3.79-.13-.17-1.03-1.37-1.03-2.62 0-1.24.65-1.85.89-2.1.22-.24.48-.3.64-.3.16 0 .32 0 .46.01.15.01.35-.06.55.42.2.48.68 1.66.74 1.78.06.12.1.27.02.44-.08.17-.12.27-.24.42-.12.14-.25.31-.36.42-.12.12-.25.25-.11.49.15.24.65 1.07 1.39 1.73.96.85 1.76 1.12 2.01 1.24.25.12.4.1.55-.06.15-.16.63-.73.8-.98.17-.25.34-.2.57-.12.24.08 1.5.71 1.76.84.26.13.43.19.5.3.06.11.06.62-.16 1.24z"/></svg>
+        Falar com o suporte
+      </button>
 
       <p class="text-center text-xs mt-6" style="color:var(--lsr-text-muted)">Desenvolvido por Jhony Beraldo</p>
     </div>
@@ -215,6 +218,13 @@
         <button id="btn-encerrar-turno" class="btn-lsr btn-hero-encerrar w-full">■ ENCERRAR TURNO</button>
       </div>
 
+      <!-- Lucro do Dia: soma de TODOS os turnos fechados hoje (pode ter mais de um) -->
+      <div class="card-lsr w-full max-w-sm p-4 text-center">
+        <p class="text-xs" style="color:var(--lsr-text-muted)">Lucro líquido de hoje</p>
+        <p id="lucro-do-dia" class="numero-digital text-3xl font-bold mt-1">R$ --</p>
+        <p id="lucro-do-dia-qtd" class="text-xs mt-1" style="color:var(--lsr-text-muted)"></p>
+      </div>
+
       <button id="btn-abrir-config-motorista" class="btn-lsr btn-lsr-outline w-full max-w-sm gap-2">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.6V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.6 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.6 1z"/></svg>
         Configurações
@@ -251,7 +261,10 @@
         <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
       </button>
       <button id="btn-whatsapp-suporte-motorista" class="card-lsr p-4 flex items-center justify-between text-left">
-        <span class="text-white font-semibold">📞 Falar com o suporte</span>
+        <span class="text-white font-semibold flex items-center gap-2">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#25D366"><path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.37 5.07L2 22l5.06-1.33A9.94 9.94 0 0 0 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm5.2 14.2c-.22.62-1.28 1.2-1.77 1.24-.45.04-.9.22-3.02-.63-2.56-1.02-4.2-3.62-4.33-3.79-.13-.17-1.03-1.37-1.03-2.62 0-1.24.65-1.85.89-2.1.22-.24.48-.3.64-.3.16 0 .32 0 .46.01.15.01.35-.06.55.42.2.48.68 1.66.74 1.78.06.12.1.27.02.44-.08.17-.12.27-.24.42-.12.14-.25.31-.36.42-.12.12-.25.25-.11.49.15.24.65 1.07 1.39 1.73.96.85 1.76 1.12 2.01 1.24.25.12.4.1.55-.06.15-.16.63-.73.8-.98.17-.25.34-.2.57-.12.24.08 1.5.71 1.76.84.26.13.43.19.5.3.06.11.06.62-.16 1.24z"/></svg>
+          Falar com o suporte
+        </span>
         <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
       </button>
       <button id="btn-logout" class="card-lsr p-4 flex items-center justify-between text-left mt-4">
