@@ -37,6 +37,23 @@ function lerCodigoIndicacaoCache() {
   try { return localStorage.getItem(REF_CACHE_KEY); } catch (e) { return null; }
 }
 
+// ------------------------------------------------------------
+// Link de cadastro compartilhado pelo master: ?tela=cadastro já
+// abre direto na tela de criar conta, sem precisar clicar em nada.
+// ------------------------------------------------------------
+let abrirDiretoNoCadastro = false;
+
+function capturarTelaInicialDaURL() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('tela') === 'cadastro') {
+    abrirDiretoNoCadastro = true;
+    params.delete('tela');
+    const novaUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+    window.history.replaceState({}, '', novaUrl);
+  }
+}
+capturarTelaInicialDaURL();
+
 /**
  * Neutraliza caracteres HTML perigosos antes de inserir texto vindo do
  * usuário (nome, WhatsApp, descrição de despesa, nome de veículo etc.)
@@ -279,6 +296,8 @@ async function inicializarApp() {
   const usuario = await Auth.getUsuarioAtual();
   if (usuario) {
     await verificarAcessoEDirecionar(usuario);
+  } else if (abrirDiretoNoCadastro) {
+    mostrarTela('tela-cadastro');
   } else {
     mostrarTela('tela-login');
   }
@@ -480,6 +499,22 @@ function abrirModalIndicarAmigo() {
 
 function fecharModalIndicarAmigo() {
   document.getElementById('modal-indicar-amigo').classList.add('hidden');
+}
+
+// ------------------------------------------------------------
+// Compartilhar link de cadastro (master)
+// ------------------------------------------------------------
+function gerarLinkCadastro() {
+  return `${window.location.origin}${window.location.pathname}?tela=cadastro`;
+}
+
+function abrirModalCompartilharCadastro() {
+  document.getElementById('texto-link-cadastro').textContent = gerarLinkCadastro();
+  document.getElementById('modal-compartilhar-cadastro').classList.remove('hidden');
+}
+
+function fecharModalCompartilharCadastro() {
+  document.getElementById('modal-compartilhar-cadastro').classList.add('hidden');
 }
 
 /**
@@ -2017,6 +2052,36 @@ document.addEventListener('DOMContentLoaded', () => {
     if (navigator.share) {
       try {
         await navigator.share({ title: 'LSR App', text: 'Baixa o LSR App pra controlar seu lucro real como motorista de app!', url: link });
+      } catch (e) { /* usuário cancelou o compartilhamento — tudo bem */ }
+    } else {
+      try {
+        await navigator.clipboard.writeText(link);
+        alert('Link copiado! Cole numa conversa pra compartilhar.');
+      } catch (e) {
+        alert('Não foi possível compartilhar. Selecione o link manualmente.');
+      }
+    }
+  });
+
+  // Compartilhar link de cadastro (master)
+  document.getElementById('btn-compartilhar-cadastro').addEventListener('click', abrirModalCompartilharCadastro);
+  document.getElementById('btn-fechar-compartilhar-cadastro').addEventListener('click', fecharModalCompartilharCadastro);
+  document.getElementById('btn-copiar-link-cadastro').addEventListener('click', async () => {
+    const btn = document.getElementById('btn-copiar-link-cadastro');
+    try {
+      await navigator.clipboard.writeText(gerarLinkCadastro());
+      const textoOriginal = btn.textContent;
+      btn.textContent = 'Copiado!';
+      setTimeout(() => { btn.textContent = textoOriginal; }, 2000);
+    } catch (e) {
+      alert('Não foi possível copiar. Selecione o link manualmente.');
+    }
+  });
+  document.getElementById('btn-compartilhar-link-cadastro').addEventListener('click', async () => {
+    const link = gerarLinkCadastro();
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'LSR App', text: 'Cadastre-se no LSR App pra controlar seu lucro real como motorista de app!', url: link });
       } catch (e) { /* usuário cancelou o compartilhamento — tudo bem */ }
     } else {
       try {
