@@ -93,3 +93,49 @@ body {
   min-height: 100vh;
   min-height: 100dvh;
 }
+
+/* ------------------------------------------------------------
+   Botão "herói" (Iniciar/Encerrar Turno) — o botão mais tocado do
+   app inteiro. Reservamos o efeito neon 3D só pra ele (não em todo
+   botão primário/de perigo), pra não virar ruído visual.
+   ------------------------------------------------------------ */
+.btn-hero-iniciar {
+  background: linear-gradient(180deg, #33ffb0, var(--lsr-green) 55%, #00b04a);
+  box-shadow:
+    0 0 0 1px rgba(0, 230, 118, 0.5),
+    0 10px 26px rgba(0, 230, 118, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -2px 6px rgba(0, 60, 30, 0.35);
+  color: #062910;
+}
+
+.btn-hero-encerrar {
+  background: linear-gradient(180deg, #ff8a80, var(--lsr-red) 55%, #d32f2f);
+  box-shadow:
+    0 0 0 1px rgba(255, 82, 82, 0.5),
+    0 10px 26px rgba(255, 82, 82, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -2px 6px rgba(70, 0, 0, 0.35);
+  color: #3a0a0a;
+}
+
+.btn-hero-iniciar:active,
+.btn-hero-encerrar:active {
+  transform: scale(0.97);
+  filter: brightness(0.95);
+}
+
+/* Card do Cofre de Manutenção — mais peso visual que os demais
+   cards da home, com um brilho sutil combinando com o laranja. */
+.card-cofre {
+  border-radius: 20px;
+  border: 1px solid rgba(255, 183, 77, 0.35);
+  box-shadow: 0 0 28px rgba(255, 183, 77, 0.12);
+}
+
+/* Números de destaque (lucro, saldo do cofre) — fonte monoespaçada,
+   pra dar aquele ar de painel digital, combinando com o tema "rodas". */
+.numero-digital {
+  font-family: 'SFMono-Regular', Consolas, 'Courier New', monospace;
+  letter-spacing: 0.5px;
+}
