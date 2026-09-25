@@ -174,9 +174,12 @@
       </div>
 
       <!-- Cofre de Manutenção: total acumulado reservado (manutenção + depreciação) -->
-      <div class="card-lsr w-full max-w-sm p-4 text-center" style="border: 1px solid #ffb74d;">
-        <p class="text-xs mb-1" style="color:var(--lsr-text-muted)">🔧 Cofre de Manutenção</p>
-        <p id="saldo-cofre-manutencao" class="text-2xl font-bold" style="color:#ffb74d;">R$ --</p>
+      <div class="card-lsr card-cofre w-full max-w-sm p-4 text-center">
+        <p class="text-xs mb-1 flex items-center justify-center gap-1" style="color:var(--lsr-text-muted)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffb74d" stroke-width="2"><path d="M14.7 6.3a4 4 0 1 1-5.4 5.4L4 17v3h3l5.3-5.3a4 4 0 0 1 5.4-5.4l-3 3-2-2 3-3z"/></svg>
+          Cofre de Manutenção
+        </p>
+        <p id="saldo-cofre-manutencao" class="numero-digital text-2xl font-bold" style="color:#ffb74d;">R$ --</p>
         <p class="text-xs mt-1 mb-3" style="color:var(--lsr-text-muted)">Total reservado em manutenção + depreciação</p>
         <div class="flex gap-2">
           <button id="btn-registrar-despesa" class="btn-lsr btn-lsr-outline flex-1 text-sm" style="min-height:40px;">💸 Registrar despesa</button>
@@ -199,7 +202,7 @@
           <p class="text-white font-semibold mb-1">Nenhum turno ativo</p>
           <p class="text-sm" style="color:var(--lsr-text-muted)">Pronto pra começar a trabalhar?</p>
         </div>
-        <button id="btn-iniciar-turno" class="btn-lsr btn-lsr-primary w-full">▶ INICIAR TURNO</button>
+        <button id="btn-iniciar-turno" class="btn-lsr btn-hero-iniciar w-full">▶ INICIAR TURNO</button>
       </div>
 
       <!-- Estado B: turno ativo -->
@@ -209,10 +212,13 @@
           <p id="turno-ativo-veiculo" class="text-white font-semibold mb-1"></p>
           <p id="turno-ativo-info" class="text-sm" style="color:var(--lsr-text-muted)"></p>
         </div>
-        <button id="btn-encerrar-turno" class="btn-lsr btn-lsr-danger w-full">■ ENCERRAR TURNO</button>
+        <button id="btn-encerrar-turno" class="btn-lsr btn-hero-encerrar w-full">■ ENCERRAR TURNO</button>
       </div>
 
-      <button id="btn-abrir-config-motorista" class="btn-lsr btn-lsr-outline w-full max-w-sm">⚙️ Configurações</button>
+      <button id="btn-abrir-config-motorista" class="btn-lsr btn-lsr-outline w-full max-w-sm gap-2">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.6V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.6 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.6 1z"/></svg>
+        Configurações
+      </button>
 
       <p class="text-xs text-center mt-4" style="color:var(--lsr-text-muted)">Desenvolvido por Jhony Beraldo</p>
     </main>
@@ -268,7 +274,9 @@
         </div>
       </div>
       <div class="flex items-center gap-3">
-        <button id="btn-abrir-config-admin" class="text-xl leading-none" style="color:var(--lsr-text-muted)">⚙️</button>
+        <button id="btn-abrir-config-admin" style="color:var(--lsr-text-muted)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.6V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.6 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.6 1z"/></svg>
+        </button>
         <button id="btn-logout-admin" class="text-sm font-semibold" style="color:var(--lsr-red)">Sair</button>
       </div>
     </header>
@@ -608,7 +616,7 @@
       <div id="resultado-relatorio" class="hidden flex flex-col gap-3">
         <div class="card-lsr p-4 text-center">
           <p class="text-xs mb-1" style="color:var(--lsr-text-muted)">Lucro líquido do período</p>
-          <p id="relatorio-lucro-liquido" class="text-3xl font-bold">R$ 0,00</p>
+          <p id="relatorio-lucro-liquido" class="numero-digital text-3xl font-bold">R$ 0,00</p>
         </div>
 
         <div class="card-lsr p-4">
@@ -807,7 +815,7 @@
         <p id="aviso-km-inicial" class="hidden text-sm" style="color:#ffb74d"></p>
         <p id="erro-iniciar-turno" class="hidden text-sm" style="color:var(--lsr-red)"></p>
 
-        <button type="submit" class="btn-lsr btn-lsr-primary w-full mt-2">▶ Iniciar</button>
+        <button type="submit" class="btn-lsr btn-hero-iniciar w-full mt-2">▶ Iniciar</button>
       </form>
     </div>
   </div>
@@ -840,7 +848,7 @@
 
         <p id="erro-encerrar-turno" class="hidden text-sm" style="color:var(--lsr-red)"></p>
 
-        <button type="submit" id="btn-ir-confirmar-encerrar" class="btn-lsr btn-lsr-danger w-full mt-2">■ Encerrar turno</button>
+        <button type="submit" id="btn-ir-confirmar-encerrar" class="btn-lsr btn-hero-encerrar w-full mt-2">■ Encerrar turno</button>
       </form>
     </div>
   </div>
@@ -865,7 +873,7 @@
   <div id="tela-resultado-turno" class="tela hidden tela-cheia flex flex-col items-center justify-center px-6">
     <div class="w-full max-w-sm card-lsr p-6">
       <p class="text-center text-sm mb-1" style="color:var(--lsr-text-muted)">Lucro líquido do turno</p>
-      <p id="resultado-lucro" class="text-center text-4xl font-bold mb-4">R$ 0,00</p>
+      <p id="resultado-lucro" class="numero-digital text-center text-4xl font-bold mb-4">R$ 0,00</p>
 
       <div class="text-center mb-4">
         <p class="text-xs" style="color:var(--lsr-text-muted)">Lucro / km</p>
