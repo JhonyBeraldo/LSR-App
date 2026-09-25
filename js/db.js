@@ -36,6 +36,21 @@ function agoraISO() {
   return new Date().toISOString();
 }
 
+/**
+ * Executa uma chamada ao Supabase com um TEMPO LIMITE. Sem isso, numa
+ * rede fraca/instável, o app pode ficar esperando a resposta travar por
+ * muito tempo antes de desistir e cair no cache local — o motoboy não
+ * pode ficar esperando. Se o tempo estourar, trata como se tivesse
+ * falhado (cai no fallback offline normalmente).
+ */
+function comTimeout(promise, ms = 6000) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Tempo de resposta excedido')), ms))
+  ]);
+}
+
 window.LSR_DB = db;
 window.gerarUUID = gerarUUID;
 window.agoraISO = agoraISO;
+window.comTimeout = comTimeout;

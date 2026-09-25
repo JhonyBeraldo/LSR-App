@@ -60,12 +60,14 @@ const Turnos = {
       // vai direto pro fallback local, sem esperar o fetch falhar.
       if (!navigator.onLine) throw new Error('offline (detectado antes de tentar)');
 
-      const { data, error } = await supabaseClient
-        .from('turnos')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('status', 'ativo')
-        .limit(1);
+      const { data, error } = await comTimeout(
+        supabaseClient
+          .from('turnos')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('status', 'ativo')
+          .limit(1)
+      );
       if (error) throw error;
 
       if (data && data.length) {
@@ -101,14 +103,16 @@ const Turnos = {
     try {
       if (!navigator.onLine) throw new Error('offline (detectado antes de tentar)');
 
-      const { data, error } = await supabaseClient
-        .from('turnos')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('veiculo_id', veiculoId)
-        .eq('status', 'fechado')
-        .order('tempo_fim', { ascending: false })
-        .limit(1);
+      const { data, error } = await comTimeout(
+        supabaseClient
+          .from('turnos')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('veiculo_id', veiculoId)
+          .eq('status', 'fechado')
+          .order('tempo_fim', { ascending: false })
+          .limit(1)
+      );
       if (error) throw error;
 
       if (data && data.length) {
@@ -139,13 +143,15 @@ const Turnos = {
     try {
       if (!navigator.onLine) throw new Error('offline (detectado antes de tentar)');
 
-      const { data, error } = await supabaseClient
-        .from('turnos')
-        .select('*')
-        .eq('user_id', userId)
-        .neq('status', 'ativo')
-        .order('data_turno', { ascending: false })
-        .limit(limite);
+      const { data, error } = await comTimeout(
+        supabaseClient
+          .from('turnos')
+          .select('*')
+          .eq('user_id', userId)
+          .neq('status', 'ativo')
+          .order('data_turno', { ascending: false })
+          .limit(limite)
+      );
       if (error) throw error;
 
       const remotos = (data || []).map((t) => ({ ...t, _synced: true }));

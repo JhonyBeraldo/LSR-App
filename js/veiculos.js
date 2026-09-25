@@ -14,12 +14,14 @@ const Veiculos = {
       // pro cache local, sem esperar o fetch falhar sozinho.
       if (!navigator.onLine) throw new Error('offline (detectado antes de tentar)');
 
-      const { data, error } = await supabaseClient
-        .from('veiculos')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('is_ativo', true)
-        .order('created_at', { ascending: false });
+      const { data, error } = await comTimeout(
+        supabaseClient
+          .from('veiculos')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('is_ativo', true)
+          .order('created_at', { ascending: false })
+      );
 
       if (error) throw error;
 
@@ -111,11 +113,13 @@ const Veiculos = {
       throw new Error('Veículo não está no cache local e o app está offline.');
     }
 
-    const { data, error } = await supabaseClient
-      .from('veiculos')
-      .select('*')
-      .eq('id', id)
-      .single();
+    const { data, error } = await comTimeout(
+      supabaseClient
+        .from('veiculos')
+        .select('*')
+        .eq('id', id)
+        .single()
+    );
     if (error) throw error;
 
     await LSR_DB.veiculos.put({ ...data, _synced: true });
