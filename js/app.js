@@ -1182,6 +1182,20 @@ function abrirWhatsAppLembrete(whatsapp, nome, dias) {
   window.location.href = `https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`;
 }
 
+/**
+ * Mensagem de primeiro contato com quem acabou de se cadastrar (ainda
+ * pendente de aprovação) — pra negociar o plano antes de liberar o acesso.
+ */
+function abrirWhatsAppBoasVindas(whatsapp, nome) {
+  let numero = (whatsapp || '').replace(/\D/g, '');
+  if (!numero) return;
+  if (numero.length <= 11) numero = '55' + numero;
+
+  const mensagem = `Olá ${nome}! Vi seu cadastro no LSR App 🚗💰 Muito obrigado por se juntar! Vamos conversar rapidinho pra eu te ajudar a escolher o melhor plano pra você?`;
+
+  window.location.href = `https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`;
+}
+
 function formatarVencimento(dataISO) {
   if (!dataISO) return { texto: 'Sem plano definido', cor: 'var(--lsr-text-muted)' };
   const hoje = new Date();
@@ -1235,10 +1249,14 @@ async function carregarPainelAdmin() {
         card.innerHTML = `
           <div>
             <p class="text-white text-sm">${escapeHtml(m.nome) || 'Sem nome'}</p>
-            ${m.whatsapp ? `<p class="text-xs" style="color:var(--lsr-text-muted)">${escapeHtml(m.whatsapp)}</p>` : ''}
+            ${m.whatsapp ? `<button class="btn-whatsapp-pendente text-xs flex items-center gap-1 mt-0.5" style="color:#25D366;"><svg width="12" height="12" viewBox="0 0 24 24" fill="#25D366"><path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.37 5.07L2 22l5.06-1.33A9.94 9.94 0 0 0 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm5.2 14.2c-.22.62-1.28 1.2-1.77 1.24-.45.04-.9.22-3.02-.63-2.56-1.02-4.2-3.62-4.33-3.79-.13-.17-1.03-1.37-1.03-2.62 0-1.24.65-1.85.89-2.1.22-.24.48-.3.64-.3.16 0 .32 0 .46.01.15.01.35-.06.55.42.2.48.68 1.66.74 1.78.06.12.1.27.02.44-.08.17-.12.27-.24.42-.12.14-.25.31-.36.42-.12.12-.25.25-.11.49.15.24.65 1.07 1.39 1.73.96.85 1.76 1.12 2.01 1.24.25.12.4.1.55-.06.15-.16.63-.73.8-.98.17-.25.34-.2.57-.12.24.08 1.5.71 1.76.84.26.13.43.19.5.3.06.11.06.62-.16 1.24z"/></svg>${escapeHtml(m.whatsapp)}</button>` : ''}
           </div>
           <button class="btn-aprovar-pendente text-sm font-semibold px-3 py-1 rounded-full" style="background-color:var(--lsr-green); color:#0a0a0a;" data-id="${m.id}">Aprovar</button>
         `;
+        const btnWhatsPendente = card.querySelector('.btn-whatsapp-pendente');
+        if (btnWhatsPendente) {
+          btnWhatsPendente.addEventListener('click', () => abrirWhatsAppBoasVindas(m.whatsapp, m.nome));
+        }
         card.querySelector('.btn-aprovar-pendente').addEventListener('click', () => {
           abrirModalPlano(m.id, m.nome, null, 'Aprovar');
         });
@@ -1828,7 +1846,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       await Auth.cadastrar(nomeUsuario, senha, whatsapp, lerCodigoIndicacaoCache());
       try { localStorage.removeItem(REF_CACHE_KEY); } catch (e) {}
-      mostrarErro('erro-cadastro', 'Conta criada! Aguarde a aprovação do administrador para poder entrar.');
+      mostrarErro('erro-cadastro', 'Conta criada! O administrador vai entrar em contato pelo WhatsApp cadastrado. Se preferir, também pode chamar o suporte.');
       document.getElementById('erro-cadastro').style.color = 'var(--lsr-green)';
     } catch (err) {
       const jaExiste = (err.message || '').toLowerCase().includes('already') || (err.message || '').toLowerCase().includes('registered');
