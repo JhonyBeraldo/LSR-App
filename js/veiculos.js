@@ -9,22 +9,39 @@ const Veiculos = {
    * Atualiza o cache local (Dexie) com o resultado.
    */
   async listarAtivos(userId) {
-    const { data, error } = await supabaseClient
-      .from('veiculos')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('is_ativo', true)
-      .order('created_at', { ascending: false });
+    try {
+      // Se já sabemos que está offline, nem tenta a rede — vai direto
+      // pro cache local, sem esperar o fetch falhar sozinho.
+      if (!navigator.onLine) throw new Error('offline (detectado antes de tentar)');
 
-    if (error) throw error;
+      const { data, error } = await supabaseClient
+        .from('veiculos')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('is_ativo', true)
+        .order('created_at', { ascending: false });
 
-    // Cacheia localmente
-    if (data && data.length) {
-      const comFlags = data.map((v) => ({ ...v, _synced: true }));
-      await LSR_DB.veiculos.bulkPut(comFlags);
+      if (error) throw error;
+
+      // Cacheia localmente
+      if (data && data.length) {
+        const comFlags = data.map((v) => ({ ...v, _synced: true }));
+        await LSR_DB.veiculos.bulkPut(comFlags);
+      }
+
+      return data || [];
+    } catch (err) {
+      console.warn('[Veiculos] Sem conexão pra listar veículos remotos, usando cache local:', err);
+      // Fallback: usa o que já estiver salvo localmente de uma sincronização anterior.
+      // Se o app nunca chegou a carregar os veículos online nesse aparelho, a lista
+      // vem vazia — mas qualquer uso anterior (iniciar turno, tela de veículos etc.)
+      // já deixa esse cache preenchido.
+      const locais = await LSR_DB.veiculos
+        .where('user_id').equals(userId)
+        .and((v) => v.is_ativo === true)
+        .toArray();
+      return locais;
     }
-
-    return data || [];
   },
 
   /**
