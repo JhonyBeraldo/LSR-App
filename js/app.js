@@ -410,8 +410,10 @@ function calcularTurno(turno, veiculo) {
 // HOME: preço de combustível + estado do turno (ativo ou não)
 // ------------------------------------------------------------
 async function carregarEstadoHome() {
-  // Cofre de Manutenção: calcula em segundo plano, sem travar o resto da home
+  // Cofre de Manutenção e Lucro do Dia: calculam em segundo plano,
+  // sem travar o resto da home.
   atualizarSaldoCofre();
+  atualizarLucroDoDia();
 
   // Preço de combustível
   const precoAtual = perfilAtual?.preco_combustivel_atual;
@@ -503,6 +505,41 @@ async function atualizarSaldoCofre() {
     elSaldo.style.color = saldo < 0 ? 'var(--lsr-red)' : '#ffb74d';
   } catch (err) {
     console.error('[App] Erro ao calcular saldo do cofre de manutenção:', err);
+  }
+}
+
+/**
+ * Soma o lucro de TODOS os turnos fechados HOJE — não só do último.
+ * Um motorista pode abrir e fechar mais de um turno no mesmo dia
+ * (manhã e tarde, por exemplo), então esse número tem que somar todos.
+ */
+async function atualizarLucroDoDia() {
+  try {
+    const hojeISO = new Date().toISOString().slice(0, 10);
+    const turnos = await Turnos.listarHistorico(usuarioAtual.id, 500);
+    const fechadosHoje = turnos.filter((t) => t.status === 'fechado' && t.data_turno === hojeISO);
+
+    const idsVeiculos = [...new Set(fechadosHoje.map((t) => t.veiculo_id))];
+    const veiculosMap = {};
+    await Promise.all(idsVeiculos.map(async (id) => {
+      try { veiculosMap[id] = await Veiculos.obterPorId(id); } catch (e) { veiculosMap[id] = null; }
+    }));
+
+    let total = 0;
+    fechadosHoje.forEach((t) => {
+      total += calcularTurno(t, veiculosMap[t.veiculo_id]).lucro;
+    });
+
+    const el = document.getElementById('lucro-do-dia');
+    el.textContent = formatarMoeda(total);
+    el.style.color = total >= 0 ? 'var(--lsr-green)' : 'var(--lsr-red)';
+
+    const elQtd = document.getElementById('lucro-do-dia-qtd');
+    elQtd.textContent = fechadosHoje.length
+      ? `${fechadosHoje.length} turno(s) fechado(s) hoje`
+      : 'Nenhum turno fechado hoje ainda';
+  } catch (err) {
+    console.error('[App] Erro ao calcular lucro do dia:', err);
   }
 }
 
