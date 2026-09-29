@@ -254,10 +254,20 @@
           </span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--lsr-green)" stroke-width="2.5"><path d="M9 6l6 6-6 6"/></svg>
         </button>
-        <button id="btn-ir-calculadora" class="hidden card-lsr p-4 flex items-center justify-between text-left">
+        <button id="btn-ir-calculadora" class="card-lsr p-4 flex items-center justify-between text-left">
           <span class="flex items-center gap-2.5">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--lsr-text-muted)" stroke-width="2"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 7h6M8 12h1M8 15h1M12 12h1M12 15h1M16 12h1M16 15h1"/></svg>
             <span class="text-white text-sm">Vale a corrida? (Calculadora)</span>
+          </span>
+          <span class="flex items-center gap-2">
+            <span id="calc-lock-badge" class="hidden text-xs font-semibold px-2 py-0.5 rounded-full" style="background:rgba(255,183,77,0.15); color:#ffb74d;">PRO</span>
+            <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
+          </span>
+        </button>
+        <button id="btn-ir-meu-plano" class="card-lsr p-4 flex items-center justify-between text-left">
+          <span class="flex items-center gap-2.5">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--lsr-text-muted)" stroke-width="2"><path d="M20 7H4a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1zM3 10h18"/></svg>
+            <span class="text-white text-sm">Meu plano</span>
           </span>
           <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
         </button>
@@ -620,6 +630,10 @@
           <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">Valor (R$)</label>
           <input type="number" min="0" step="0.01" id="plano-cadastro-valor" required class="input-lsr w-full" placeholder="0,00">
         </div>
+        <label class="flex items-center gap-2 text-sm" style="color:var(--lsr-text-muted)">
+          <input type="checkbox" id="plano-cadastro-calculadora" style="width:16px;height:16px;">
+          Inclui Calculadora de Viabilidade
+        </label>
 
         <p id="erro-cadastrar-plano" class="hidden text-sm" style="color:var(--lsr-red)"></p>
 
@@ -647,10 +661,11 @@
         <div class="flex justify-between"><span style="color:var(--lsr-text-muted)">Turnos registrados</span><span id="detalhe-motorista-turnos" class="text-white"></span></div>
       </div>
 
-      <div class="flex items-center justify-between mb-4 p-3" style="background:#171717;border-radius:10px;">
+      <div class="flex items-center justify-between mb-2 p-3" style="background:#171717;border-radius:10px;">
         <span class="text-sm text-white">🧮 Calculadora de Viabilidade</span>
         <button id="btn-detalhe-toggle-calculadora" class="text-xs font-semibold px-3 py-1 rounded-full"></button>
       </div>
+      <button id="btn-detalhe-oferecer-calculadora" class="hidden btn-lsr btn-lsr-outline w-full mb-4 text-sm">📤 Oferecer calculadora por WhatsApp</button>
 
       <div class="flex flex-col gap-2">
         <button id="btn-detalhe-whatsapp" class="btn-lsr w-full" style="background-color:#25D366; color:#0a0a0a;">📲 Avisar por WhatsApp</button>
@@ -765,6 +780,30 @@
   </div>
 
   <!-- ============================================================ -->
+  <!-- TELA: MEU PLANO -->
+  <!-- ============================================================ -->
+  <div id="tela-meu-plano" class="tela hidden tela-cheia flex flex-col">
+    <header class="flex items-center gap-3 px-5 py-4">
+      <button id="btn-voltar-meu-plano" class="text-2xl leading-none" style="color:var(--lsr-text-muted)">←</button>
+      <span class="font-bold text-white text-lg">Meu plano</span>
+    </header>
+    <main class="flex-1 px-5 pb-6 overflow-y-auto flex flex-col gap-4">
+
+      <div class="card-lsr p-4 text-center" style="border:1px solid rgba(0,230,118,0.3);">
+        <p class="text-xs mb-1" style="color:var(--lsr-text-muted)">Seu plano atual</p>
+        <p id="meu-plano-nome" class="text-xl font-bold text-white"></p>
+        <p id="meu-plano-valor" class="numero-digital text-sm mt-1" style="color:var(--lsr-green)"></p>
+        <p id="meu-plano-vencimento" class="text-xs mt-2" style="color:var(--lsr-text-muted)"></p>
+      </div>
+
+      <div>
+        <span class="text-xs pl-0.5" style="color:#6a6a6a">Outros planos disponíveis</span>
+        <div id="lista-outros-planos" class="flex flex-col gap-2 mt-2"></div>
+        <p id="outros-planos-vazio" class="hidden text-sm text-center py-4" style="color:var(--lsr-text-muted)">Nenhum outro plano disponível no momento.</p>
+      </div>
+    </main>
+  </div>
+
   <!-- TELA: CALCULADORA DE VIABILIDADE -->
   <!-- ============================================================ -->
   <div id="tela-calculadora" class="tela hidden tela-cheia flex flex-col">
@@ -1089,6 +1128,24 @@
         <button id="btn-esquecido-preencher" class="btn-lsr btn-lsr-primary w-full">Preencher dados de fechamento</button>
         <button id="btn-esquecido-descartar" class="btn-lsr btn-lsr-outline w-full">Descartar turno (cliquei sem querer)</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- MODAL: VITRINE DA CALCULADORA (quando não habilitada) -->
+  <!-- ============================================================ -->
+  <div id="modal-calculadora-upsell" class="hidden fixed inset-0 z-50 flex items-center justify-center px-6" style="background-color: rgba(0,0,0,0.6);">
+    <div class="card-lsr w-full sm:max-w-sm p-6 text-center">
+      <div class="text-4xl mb-3">🧮</div>
+      <h2 class="text-lg font-bold text-white mb-2">Vale a corrida?</h2>
+      <p class="text-sm mb-4" style="color:var(--lsr-text-muted)">
+        Saiba na hora se uma corrida vale a pena, calculado com os custos reais do seu veículo — antes de aceitar. Recurso disponível em planos selecionados.
+      </p>
+      <button id="btn-solicitar-calculadora" class="btn-lsr w-full mb-2 gap-2" style="background-color:#25D366; color:#0a0a0a;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="#0a0a0a"><path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.37 5.07L2 22l5.06-1.33A9.94 9.94 0 0 0 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm5.2 14.2c-.22.62-1.28 1.2-1.77 1.24-.45.04-.9.22-3.02-.63-2.56-1.02-4.2-3.62-4.33-3.79-.13-.17-1.03-1.37-1.03-2.62 0-1.24.65-1.85.89-2.1.22-.24.48-.3.64-.3.16 0 .32 0 .46.01.15.01.35-.06.55.42.2.48.68 1.66.74 1.78.06.12.1.27.02.44-.08.17-.12.27-.24.42-.12.14-.25.31-.36.42-.12.12-.25.25-.11.49.15.24.65 1.07 1.39 1.73.96.85 1.76 1.12 2.01 1.24.25.12.4.1.55-.06.15-.16.63-.73.8-.98.17-.25.34-.2.57-.12.24.08 1.5.71 1.76.84.26.13.43.19.5.3.06.11.06.62-.16 1.24z"/></svg>
+        Quero liberar esse recurso
+      </button>
+      <button id="btn-fechar-upsell-calculadora" class="btn-lsr btn-lsr-outline w-full">Fechar</button>
     </div>
   </div>
 
