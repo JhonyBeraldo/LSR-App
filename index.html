@@ -634,6 +634,10 @@
           <input type="checkbox" id="plano-cadastro-calculadora" style="width:16px;height:16px;">
           Inclui Calculadora de Viabilidade
         </label>
+        <label class="flex items-center gap-2 text-sm" style="color:var(--lsr-text-muted)">
+          <input type="checkbox" id="plano-cadastro-visivel" checked style="width:16px;height:16px;">
+          Mostrar como opção de upgrade pro motorista
+        </label>
 
         <p id="erro-cadastrar-plano" class="hidden text-sm" style="color:var(--lsr-red)"></p>
 
@@ -1136,10 +1140,24 @@
   <!-- ============================================================ -->
   <div id="modal-calculadora-upsell" class="hidden fixed inset-0 z-50 flex items-center justify-center px-6" style="background-color: rgba(0,0,0,0.6);">
     <div class="card-lsr w-full sm:max-w-sm p-6 text-center">
-      <div class="text-4xl mb-3">🧮</div>
-      <h2 class="text-lg font-bold text-white mb-2">Vale a corrida?</h2>
+      <h2 class="text-lg font-bold text-white mb-1">Vale a corrida?</h2>
       <p class="text-sm mb-4" style="color:var(--lsr-text-muted)">
-        Saiba na hora se uma corrida vale a pena, calculado com os custos reais do seu veículo — antes de aceitar. Recurso disponível em planos selecionados.
+        Saiba na hora se uma corrida vale a pena — antes de aceitar.
+      </p>
+
+      <div class="flex gap-2 mb-4">
+        <div class="flex-1 text-center p-3" style="background:rgba(0,230,118,0.1); border:1px solid rgba(0,230,118,0.35); border-radius:12px;">
+          <p class="text-xs mb-1">🟢 Vale a pena</p>
+          <p class="numero-digital text-base font-bold" style="color:var(--lsr-green)">+R$ 11,09</p>
+        </div>
+        <div class="flex-1 text-center p-3" style="background:rgba(255,82,82,0.1); border:1px solid rgba(255,82,82,0.35); border-radius:12px;">
+          <p class="text-xs mb-1">🔴 Prejuízo</p>
+          <p class="numero-digital text-base font-bold" style="color:var(--lsr-red)">-R$ 2,40</p>
+        </div>
+      </div>
+
+      <p class="text-xs mb-4" style="color:var(--lsr-text-muted)">
+        Calculado com os custos reais do seu veículo (combustível, manutenção, depreciação) — recurso disponível em planos selecionados.
       </p>
       <button id="btn-solicitar-calculadora" class="btn-lsr w-full mb-2 gap-2" style="background-color:#25D366; color:#0a0a0a;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="#0a0a0a"><path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.37 5.07L2 22l5.06-1.33A9.94 9.94 0 0 0 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm5.2 14.2c-.22.62-1.28 1.2-1.77 1.24-.45.04-.9.22-3.02-.63-2.56-1.02-4.2-3.62-4.33-3.79-.13-.17-1.03-1.37-1.03-2.62 0-1.24.65-1.85.89-2.1.22-.24.48-.3.64-.3.16 0 .32 0 .46.01.15.01.35-.06.55.42.2.48.68 1.66.74 1.78.06.12.1.27.02.44-.08.17-.12.27-.24.42-.12.14-.25.31-.36.42-.12.12-.25.25-.11.49.15.24.65 1.07 1.39 1.73.96.85 1.76 1.12 2.01 1.24.25.12.4.1.55-.06.15-.16.63-.73.8-.98.17-.25.34-.2.57-.12.24.08 1.5.71 1.76.84.26.13.43.19.5.3.06.11.06.62-.16 1.24z"/></svg>
