@@ -341,11 +341,11 @@
       <!-- Resumo -->
       <div class="grid grid-cols-2 gap-3">
         <div class="card-lsr p-4 text-center">
-          <p id="admin-total-motoristas" class="font-bold text-lg text-white">0</p>
+          <p id="admin-total-motoristas" class="numero-digital font-bold text-lg text-white">0</p>
           <p class="text-xs" style="color:var(--lsr-text-muted)">Motoristas ativos</p>
         </div>
         <div class="card-lsr p-4 text-center">
-          <p id="admin-total-turnos" class="font-bold text-lg text-white">0</p>
+          <p id="admin-total-turnos" class="numero-digital font-bold text-lg text-white">0</p>
           <p class="text-xs" style="color:var(--lsr-text-muted)">Turnos no sistema</p>
         </div>
       </div>
@@ -357,7 +357,10 @@
 
       <!-- Pendentes de aprovação -->
       <div>
-        <h2 class="text-sm font-semibold mb-2" style="color:var(--lsr-text-muted)">⏳ Pendentes de aprovação</h2>
+        <h2 class="text-sm font-semibold mb-2 flex items-center gap-1.5" style="color:var(--lsr-text-muted)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+          Pendentes de aprovação
+        </h2>
         <div id="admin-lista-pendentes" class="flex flex-col gap-2"></div>
         <p id="admin-pendentes-vazio" class="hidden text-sm text-center py-3" style="color:var(--lsr-text-muted)">Nenhum motorista aguardando aprovação.</p>
       </div>
@@ -366,7 +369,10 @@
       <div>
         <div class="flex items-center justify-between mb-2">
           <h2 class="text-sm font-semibold" style="color:var(--lsr-text-muted)">Todos os motoristas</h2>
-          <button id="btn-filtro-vencendo" class="text-xs px-3 py-1 rounded-full font-semibold" style="border:1px solid var(--lsr-text-muted); color:var(--lsr-text-muted);">⚠️ Só vencidos/vencendo</button>
+          <button id="btn-filtro-vencendo" class="text-xs px-3 py-1 rounded-full font-semibold flex items-center gap-1" style="border:1px solid var(--lsr-text-muted); color:var(--lsr-text-muted);">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+            Só vencidos/vencendo
+          </button>
         </div>
         <input type="text" id="input-busca-motorista" class="input-lsr w-full mb-3" placeholder="Buscar por nome...">
         <div id="admin-lista-motoristas" class="flex flex-col gap-2"></div>
@@ -385,54 +391,79 @@
       <span class="font-bold text-white text-lg">Configurações</span>
     </header>
 
-    <main class="flex-1 px-5 pb-6 overflow-y-auto flex flex-col gap-2">
-      <button id="btn-menu-planos" class="card-lsr p-4 flex items-center justify-between text-left">
-        <div>
-          <p class="text-white font-semibold">📋 Planos</p>
-          <p class="text-xs" style="color:var(--lsr-text-muted)">Criar, editar, ativar ou desativar planos</p>
-        </div>
-        <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
-      </button>
+    <main class="flex-1 px-5 pb-6 overflow-y-auto flex flex-col gap-4">
 
-      <button id="btn-menu-tolerancia" class="card-lsr p-4 flex items-center justify-between text-left">
-        <div>
-          <p class="text-white font-semibold">⏳ Tolerância offline</p>
-          <p class="text-xs" style="color:var(--lsr-text-muted)">Prazo de confiança sem internet</p>
-        </div>
-        <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
-      </button>
+      <div class="flex flex-col gap-2">
+        <span class="text-xs pl-0.5" style="color:#6a6a6a">Planos</span>
+        <button id="btn-menu-planos" class="card-lsr p-4 flex items-center justify-between text-left">
+          <span class="flex items-center gap-2.5">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--lsr-text-muted)" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+            <span>
+              <p class="text-white text-sm font-semibold">Planos</p>
+              <p class="text-xs" style="color:var(--lsr-text-muted)">Criar, editar, ativar ou desativar</p>
+            </span>
+          </span>
+          <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
+        </button>
+      </div>
 
-      <button id="btn-menu-aviso" class="card-lsr p-4 flex items-center justify-between text-left">
-        <div>
-          <p class="text-white font-semibold">⚠️ Aviso de vencimento</p>
-          <p class="text-xs" style="color:var(--lsr-text-muted)">Antecedência do lembrete ao motorista</p>
-        </div>
-        <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
-      </button>
+      <div class="flex flex-col gap-2">
+        <span class="text-xs pl-0.5" style="color:#6a6a6a">Regras</span>
+        <button id="btn-menu-tolerancia" class="card-lsr p-4 flex items-center justify-between text-left">
+          <span class="flex items-center gap-2.5">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--lsr-text-muted)" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+            <span>
+              <p class="text-white text-sm font-semibold">Tolerância offline</p>
+              <p class="text-xs" style="color:var(--lsr-text-muted)">Prazo de confiança sem internet</p>
+            </span>
+          </span>
+          <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
+        </button>
+        <button id="btn-menu-aviso" class="card-lsr p-4 flex items-center justify-between text-left">
+          <span class="flex items-center gap-2.5">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--lsr-text-muted)" stroke-width="2"><path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+            <span>
+              <p class="text-white text-sm font-semibold">Aviso de vencimento</p>
+              <p class="text-xs" style="color:var(--lsr-text-muted)">Antecedência do lembrete ao motorista</p>
+            </span>
+          </span>
+          <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
+        </button>
+        <button id="btn-menu-indicacao" class="card-lsr p-4 flex items-center justify-between text-left">
+          <span class="flex items-center gap-2.5">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--lsr-text-muted)" stroke-width="2"><path d="M20 12v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-9M2 7h20v5H2V7zm10 13V7m0 0H7.5a2.5 2.5 0 1 1 0-5C11 2 12 7 12 7zm0 0h4.5a2.5 2.5 0 1 0 0-5C13 2 12 7 12 7z"/></svg>
+            <span>
+              <p class="text-white text-sm font-semibold">Programa de indicação</p>
+              <p class="text-xs" style="color:var(--lsr-text-muted)">Regras de bônus e histórico</p>
+            </span>
+          </span>
+          <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
+        </button>
+      </div>
 
-      <button id="btn-menu-indicacao" class="card-lsr p-4 flex items-center justify-between text-left">
-        <div>
-          <p class="text-white font-semibold">🎁 Programa de indicação</p>
-          <p class="text-xs" style="color:var(--lsr-text-muted)">Regras de bônus e histórico</p>
-        </div>
-        <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
-      </button>
-
-      <button id="btn-menu-whatsapp-suporte" class="card-lsr p-4 flex items-center justify-between text-left">
-        <div>
-          <p class="text-white font-semibold">📞 WhatsApp de suporte</p>
-          <p class="text-xs" style="color:var(--lsr-text-muted)">Número que os motoristas usam pra falar com você</p>
-        </div>
-        <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
-      </button>
-
-      <button id="btn-menu-guia-ajuda" class="card-lsr p-4 flex items-center justify-between text-left">
-        <div>
-          <p class="text-white font-semibold">📖 Guia de Ajuda</p>
-          <p class="text-xs" style="color:var(--lsr-text-muted)">Textos do "Como usar" que o motorista vê</p>
-        </div>
-        <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
-      </button>
+      <div class="flex flex-col gap-2">
+        <span class="text-xs pl-0.5" style="color:#6a6a6a">Motoristas</span>
+        <button id="btn-menu-whatsapp-suporte" class="card-lsr p-4 flex items-center justify-between text-left">
+          <span class="flex items-center gap-2.5">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="#25D366"><path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.37 5.07L2 22l5.06-1.33A9.94 9.94 0 0 0 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm5.2 14.2c-.22.62-1.28 1.2-1.77 1.24-.45.04-.9.22-3.02-.63-2.56-1.02-4.2-3.62-4.33-3.79-.13-.17-1.03-1.37-1.03-2.62 0-1.24.65-1.85.89-2.1.22-.24.48-.3.64-.3.16 0 .32 0 .46.01.15.01.35-.06.55.42.2.48.68 1.66.74 1.78.06.12.1.27.02.44-.08.17-.12.27-.24.42-.12.14-.25.31-.36.42-.12.12-.25.25-.11.49.15.24.65 1.07 1.39 1.73.96.85 1.76 1.12 2.01 1.24.25.12.4.1.55-.06.15-.16.63-.73.8-.98.17-.25.34-.2.57-.12.24.08 1.5.71 1.76.84.26.13.43.19.5.3.06.11.06.62-.16 1.24z"/></svg>
+            <span>
+              <p class="text-white text-sm font-semibold">WhatsApp de suporte</p>
+              <p class="text-xs" style="color:var(--lsr-text-muted)">Número que os motoristas usam pra falar com você</p>
+            </span>
+          </span>
+          <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
+        </button>
+        <button id="btn-menu-guia-ajuda" class="card-lsr p-4 flex items-center justify-between text-left">
+          <span class="flex items-center gap-2.5">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--lsr-text-muted)" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 1.5-2 2-2 3.5M12 17h.01"/></svg>
+            <span>
+              <p class="text-white text-sm font-semibold">Guia de Ajuda</p>
+              <p class="text-xs" style="color:var(--lsr-text-muted)">Textos do "Como usar" que o motorista vê</p>
+            </span>
+          </span>
+          <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
+        </button>
+      </div>
     </main>
   </div>
 
