@@ -264,7 +264,7 @@ async function verificarAcessoEDirecionar(usuario) {
     }
 
     document.getElementById('home-email').textContent = 'Bem-vindo, ' + (perfil.nome || 'Motorista');
-    document.getElementById('btn-ir-calculadora').classList.toggle('hidden', !perfil.calculadora_habilitada);
+    document.getElementById('calc-lock-badge').classList.toggle('hidden', !!perfil.calculadora_habilitada);
     mostrarTela('tela-home');
     await carregarEstadoHome();
 
@@ -1207,7 +1207,7 @@ const WHATSAPP_SUPORTE_PADRAO = '44984373004';
  * Abre o WhatsApp de suporte (número configurável pelo master).
  * Funciona mesmo na tela de login, sem estar autenticado.
  */
-async function abrirWhatsAppSuporte() {
+async function abrirWhatsAppSuporte(mensagem) {
   let numero = WHATSAPP_SUPORTE_PADRAO;
   try {
     const valor = await Auth.getConfig('whatsapp_suporte');
@@ -1217,6 +1217,11 @@ async function abrirWhatsAppSuporte() {
   }
   numero = numero.replace(/\D/g, '');
   if (numero.length <= 11) numero = '55' + numero;
+
+  if (mensagem) {
+    window.location.href = `https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`;
+    return;
+  }
 
   // IMPORTANTE: navega na MESMA aba/janela (não abre uma nova com
   // window.open). Um app instalado (PWA) que abre nova aba pra um link
@@ -1428,6 +1433,20 @@ function abrirDetalheMotorista(motoristaId) {
   btnCalc.textContent = calculadoraHabilitada ? 'Ativada ✓' : 'Desativada';
   btnCalc.style.backgroundColor = calculadoraHabilitada ? 'rgba(0,230,118,0.15)' : 'rgba(255,255,255,0.08)';
   btnCalc.style.color = calculadoraHabilitada ? 'var(--lsr-green)' : 'var(--lsr-text-muted)';
+
+  const btnOferecer = document.getElementById('btn-detalhe-oferecer-calculadora');
+  if (!calculadoraHabilitada && m.whatsapp) {
+    btnOferecer.classList.remove('hidden');
+    btnOferecer.onclick = () => {
+      const mensagem = `Olá ${m.nome || ''}! Vi que você ainda não tem a Calculadora de Viabilidade liberada no LSR App — ela mostra na hora se vale a pena aceitar uma corrida. Quer conhecer?`;
+      let numero = (m.whatsapp || '').replace(/\D/g, '');
+      if (numero.length <= 11) numero = '55' + numero;
+      window.location.href = `https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`;
+    };
+  } else {
+    btnOferecer.classList.add('hidden');
+  }
+
   btnCalc.onclick = async () => {
     btnCalc.disabled = true;
     try {
@@ -1491,7 +1510,7 @@ async function carregarConfigPlanos() {
       card.innerHTML = `
         <div>
           <p class="text-white text-sm font-semibold">${escapeHtml(p.nome)}</p>
-          <p class="text-xs" style="color:var(--lsr-text-muted)">${p.dias_duracao} dias · ${p.valor > 0 ? formatarMoeda(p.valor) : 'Grátis'}${!p.is_ativo ? ' · Inativo' : ''}</p>
+          <p class="text-xs" style="color:var(--lsr-text-muted)">${p.dias_duracao} dias · ${p.valor > 0 ? formatarMoeda(p.valor) : 'Grátis'}${p.inclui_calculadora ? ' · 🧮 Com calculadora' : ''}${!p.is_ativo ? ' · Inativo' : ''}</p>
         </div>
         <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
       `;
@@ -1517,6 +1536,53 @@ async function carregarConfigAviso() {
     document.getElementById('input-dias-aviso').value = await Admin.getDiasAvisoVencimento();
   } catch (err) {
     console.error('[App] Erro ao carregar aviso de vencimento:', err);
+  }
+}
+
+// ------------------------------------------------------------
+// Meu Plano (vitrine de upgrade pro motorista)
+// ------------------------------------------------------------
+async function carregarMeuPlano() {
+  const venc = formatarVencimento(perfilAtual?.plano_vencimento);
+  document.getElementById('meu-plano-nome').textContent = perfilAtual?.plano_nome || 'Sem plano definido';
+  document.getElementById('meu-plano-valor').textContent = perfilAtual?.plano_valor ? formatarMoeda(perfilAtual.plano_valor) : '';
+  document.getElementById('meu-plano-vencimento').textContent = 'Vence: ' + venc.texto;
+  document.getElementById('meu-plano-vencimento').style.color = venc.cor;
+
+  const container = document.getElementById('lista-outros-planos');
+  const vazio = document.getElementById('outros-planos-vazio');
+  container.innerHTML = '<p class="text-sm text-center py-4" style="color:var(--lsr-text-muted)">Carregando...</p>';
+
+  try {
+    const planos = await Admin.listarPlanos();
+    const outrosPlanos = planos.filter((p) => p.id !== perfilAtual?.plano_id);
+    container.innerHTML = '';
+
+    if (!outrosPlanos.length) {
+      vazio.classList.remove('hidden');
+      return;
+    }
+    vazio.classList.add('hidden');
+
+    outrosPlanos.forEach((p) => {
+      const card = document.createElement('div');
+      card.className = 'card-lsr p-4 flex items-center justify-between';
+      card.innerHTML = `
+        <div>
+          <p class="text-white text-sm font-semibold">${escapeHtml(p.nome)}${p.inclui_calculadora ? ' 🧮' : ''}</p>
+          <p class="text-xs" style="color:var(--lsr-text-muted)">${p.dias_duracao} dias · ${p.valor > 0 ? formatarMoeda(p.valor) : 'Grátis'}</p>
+        </div>
+        <button class="btn-solicitar-upgrade text-xs font-semibold px-3 py-1.5 rounded-full" style="background-color:#25D366; color:#0a0a0a;">Solicitar</button>
+      `;
+      card.querySelector('.btn-solicitar-upgrade').addEventListener('click', () => {
+        const mensagem = `Olá! Tenho o plano ${perfilAtual?.plano_nome || 'atual'} e gostaria de saber sobre o plano ${p.nome}.`;
+        abrirWhatsAppSuporte(mensagem);
+      });
+      container.appendChild(card);
+    });
+  } catch (err) {
+    console.error(err);
+    container.innerHTML = '<p class="text-sm text-center py-4" style="color:var(--lsr-red)">Não foi possível carregar. Verifique sua conexão.</p>';
   }
 }
 
@@ -1765,6 +1831,7 @@ function abrirModalCadastrarPlano(planoExistente) {
   document.getElementById('plano-cadastro-nome').value = planoExistente ? planoExistente.nome : '';
   document.getElementById('plano-cadastro-dias').value = planoExistente ? planoExistente.dias_duracao : '';
   document.getElementById('plano-cadastro-valor').value = planoExistente ? planoExistente.valor : '';
+  document.getElementById('plano-cadastro-calculadora').checked = planoExistente ? !!planoExistente.inclui_calculadora : false;
 
   const btnToggle = document.getElementById('btn-alternar-ativo-plano');
   if (planoExistente) {
@@ -2657,14 +2724,33 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   document.getElementById('btn-ir-calculadora').addEventListener('click', () => {
-    mostrarTela('tela-calculadora');
-    prepararCalculadora();
+    if (perfilAtual?.calculadora_habilitada) {
+      mostrarTela('tela-calculadora');
+      prepararCalculadora();
+    } else {
+      document.getElementById('modal-calculadora-upsell').classList.remove('hidden');
+    }
+  });
+  document.getElementById('btn-fechar-upsell-calculadora').addEventListener('click', () => {
+    document.getElementById('modal-calculadora-upsell').classList.add('hidden');
+  });
+  document.getElementById('btn-solicitar-calculadora').addEventListener('click', () => {
+    document.getElementById('modal-calculadora-upsell').classList.add('hidden');
+    abrirWhatsAppSuporte('Olá! Vi a Calculadora de Viabilidade no app e gostaria de saber como liberar esse recurso.');
   });
   document.getElementById('btn-voltar-calculadora').addEventListener('click', () => {
     mostrarTela('tela-config-motorista');
   });
   document.getElementById('btn-calcular-viabilidade').addEventListener('click', calcularViabilidade);
   document.getElementById('btn-calcular-outra').addEventListener('click', prepararCalculadora);
+
+  document.getElementById('btn-ir-meu-plano').addEventListener('click', () => {
+    mostrarTela('tela-meu-plano');
+    carregarMeuPlano();
+  });
+  document.getElementById('btn-voltar-meu-plano').addEventListener('click', () => {
+    mostrarTela('tela-config-motorista');
+  });
 
   document.getElementById('btn-ir-ajuda-motorista').addEventListener('click', () => {
     mostrarTela('tela-ajuda-motorista');
@@ -2691,6 +2777,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const nome = document.getElementById('plano-cadastro-nome').value.trim();
     const dias = parseInt(document.getElementById('plano-cadastro-dias').value, 10);
     const valor = parseFloat(document.getElementById('plano-cadastro-valor').value);
+    const incluiCalculadora = document.getElementById('plano-cadastro-calculadora').checked;
 
     if (!nome) {
       mostrarErro('erro-cadastrar-plano', 'Digite um nome pro plano.');
@@ -2710,9 +2797,9 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.textContent = 'Salvando...';
     try {
       if (planoEmEdicaoId) {
-        await Admin.atualizarPlano(planoEmEdicaoId, { nome, diasDuracao: dias, valor });
+        await Admin.atualizarPlano(planoEmEdicaoId, { nome, diasDuracao: dias, valor, incluiCalculadora });
       } else {
-        await Admin.criarPlano({ nome, diasDuracao: dias, valor });
+        await Admin.criarPlano({ nome, diasDuracao: dias, valor, incluiCalculadora });
       }
       fecharModalCadastrarPlano();
       await carregarConfigPlanos();

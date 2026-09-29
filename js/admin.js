@@ -122,7 +122,8 @@ const Admin = {
         plano_id: planoId,
         plano_nome: plano.nome,
         plano_valor: plano.valor,
-        plano_vencimento: novoVencimento
+        plano_vencimento: novoVencimento,
+        calculadora_habilitada: !!plano.inclui_calculadora
       })
       .eq('id', motoristaId)
       .select()
@@ -242,20 +243,20 @@ const Admin = {
     return data || [];
   },
 
-  async criarPlano({ nome, diasDuracao, valor }) {
+  async criarPlano({ nome, diasDuracao, valor, incluiCalculadora }) {
     const { data, error } = await supabaseClient
       .from('planos_precos')
-      .insert({ nome, dias_duracao: diasDuracao, valor })
+      .insert({ nome, dias_duracao: diasDuracao, valor, inclui_calculadora: !!incluiCalculadora })
       .select()
       .single();
     if (error) throw error;
     return data;
   },
 
-  async atualizarPlano(id, { nome, diasDuracao, valor }) {
+  async atualizarPlano(id, { nome, diasDuracao, valor, incluiCalculadora }) {
     const { data, error } = await supabaseClient
       .from('planos_precos')
-      .update({ nome, dias_duracao: diasDuracao, valor })
+      .update({ nome, dias_duracao: diasDuracao, valor, inclui_calculadora: !!incluiCalculadora })
       .eq('id', id)
       .select()
       .single();
