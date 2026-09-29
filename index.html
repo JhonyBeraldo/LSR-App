@@ -762,8 +762,9 @@
 
       <form id="form-nova-despesa" class="flex flex-col gap-4">
         <div>
-          <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">Veículo</label>
+          <label id="label-campo-veiculo-despesa" class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">Veículo</label>
           <select id="select-veiculo-despesa" required class="input-lsr w-full"></select>
+          <p id="texto-veiculo-unico-despesa" class="hidden text-sm" style="color:var(--lsr-text-muted)"></p>
         </div>
         <div>
           <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">Valor (R$)</label>
@@ -892,8 +893,9 @@
 
       <form id="form-iniciar-turno" class="flex flex-col gap-4">
         <div>
-          <label class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">Veículo</label>
+          <label id="label-campo-veiculo-turno" class="text-sm mb-1 block" style="color:var(--lsr-text-muted)">Veículo</label>
           <select id="select-veiculo-turno" required class="input-lsr w-full"></select>
+          <p id="texto-veiculo-unico-turno" class="hidden text-sm" style="color:var(--lsr-text-muted)"></p>
         </div>
 
         <div>
