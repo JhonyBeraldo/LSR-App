@@ -1548,6 +1548,7 @@ async function carregarMeuPlano() {
   document.getElementById('meu-plano-valor').textContent = perfilAtual?.plano_valor ? formatarMoeda(perfilAtual.plano_valor) : '';
   document.getElementById('meu-plano-vencimento').textContent = 'Vence: ' + venc.texto;
   document.getElementById('meu-plano-vencimento').style.color = venc.cor;
+  document.getElementById('meu-plano-badge-calculadora').classList.toggle('hidden', !perfilAtual?.calculadora_habilitada);
 
   const container = document.getElementById('lista-outros-planos');
   const vazio = document.getElementById('outros-planos-vazio');
@@ -1569,8 +1570,9 @@ async function carregarMeuPlano() {
       card.className = 'card-lsr p-4 flex items-center justify-between';
       card.innerHTML = `
         <div>
-          <p class="text-white text-sm font-semibold">${escapeHtml(p.nome)}${p.inclui_calculadora ? ' 🧮' : ''}</p>
+          <p class="text-white text-sm font-semibold">${escapeHtml(p.nome)}</p>
           <p class="text-xs" style="color:var(--lsr-text-muted)">${p.dias_duracao} dias · ${p.valor > 0 ? formatarMoeda(p.valor) : 'Grátis'}</p>
+          ${p.inclui_calculadora ? '<p class="text-xs mt-1" style="color:var(--lsr-green)">🧮 Inclui Calculadora de Viabilidade</p>' : ''}
         </div>
         <button class="btn-solicitar-upgrade text-xs font-semibold px-3 py-1.5 rounded-full" style="background-color:#25D366; color:#0a0a0a;">Solicitar</button>
       `;
