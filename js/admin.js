@@ -288,6 +288,22 @@ const Admin = {
   },
 
   // ------------------------------------------------------------
+  // CALCULADORA DE VIABILIDADE (liga/desliga por motorista)
+  // ------------------------------------------------------------
+  async definirCalculadoraHabilitada(userId, habilitada) {
+    const { data, error } = await supabaseClient
+      .from('perfis')
+      .update({ calculadora_habilitada: habilitada })
+      .eq('id', userId)
+      .select();
+    if (error) throw error;
+    if (!Array.isArray(data) || data.length === 0) {
+      throw new Error('Nenhuma linha atualizada ao alterar a calculadora.');
+    }
+    return data[0];
+  },
+
+  // ------------------------------------------------------------
   // GUIA DE AJUDA (editável pelo master, lido pelo motorista)
   // ------------------------------------------------------------
   async listarConteudoAjuda() {

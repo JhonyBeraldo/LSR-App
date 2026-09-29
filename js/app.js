@@ -264,6 +264,7 @@ async function verificarAcessoEDirecionar(usuario) {
     }
 
     document.getElementById('home-email').textContent = 'Bem-vindo, ' + (perfil.nome || 'Motorista');
+    document.getElementById('btn-ir-calculadora').classList.toggle('hidden', !perfil.calculadora_habilitada);
     mostrarTela('tela-home');
     await carregarEstadoHome();
 
@@ -1422,6 +1423,24 @@ function abrirDetalheMotorista(motoristaId) {
     abrirModalResetarSenha(m.id, m.nome);
   };
 
+  const btnCalc = document.getElementById('btn-detalhe-toggle-calculadora');
+  const calculadoraHabilitada = !!m.calculadora_habilitada;
+  btnCalc.textContent = calculadoraHabilitada ? 'Ativada ✓' : 'Desativada';
+  btnCalc.style.backgroundColor = calculadoraHabilitada ? 'rgba(0,230,118,0.15)' : 'rgba(255,255,255,0.08)';
+  btnCalc.style.color = calculadoraHabilitada ? 'var(--lsr-green)' : 'var(--lsr-text-muted)';
+  btnCalc.onclick = async () => {
+    btnCalc.disabled = true;
+    try {
+      await Admin.definirCalculadoraHabilitada(m.id, !calculadoraHabilitada);
+      fecharModalDetalheMotorista();
+      await carregarPainelAdmin();
+    } catch (err) {
+      console.error(err);
+      alert('Não foi possível atualizar. Verifique sua conexão.');
+      btnCalc.disabled = false;
+    }
+  };
+
   const btnToggle = document.getElementById('btn-detalhe-toggle');
   btnToggle.textContent = m.is_ativo ? 'Bloquear acesso' : 'Liberar acesso';
   btnToggle.onclick = async () => {
@@ -1499,6 +1518,106 @@ async function carregarConfigAviso() {
   } catch (err) {
     console.error('[App] Erro ao carregar aviso de vencimento:', err);
   }
+}
+
+// ------------------------------------------------------------
+// Calculadora de Viabilidade ("Vale a corrida?")
+// ------------------------------------------------------------
+let veiculosCalculadoraCache = [];
+
+async function prepararCalculadora() {
+  esconderErro('calc-erro');
+  document.getElementById('calc-input-km').value = '';
+  document.getElementById('calc-input-valor').value = '';
+  document.getElementById('calc-resultado').classList.add('hidden');
+  document.getElementById('btn-calcular-outra').classList.add('hidden');
+  document.getElementById('btn-calcular-viabilidade').classList.remove('hidden');
+  document.getElementById('calc-select-veiculo-wrap').classList.remove('hidden');
+
+  const select = document.getElementById('calc-select-veiculo');
+  select.innerHTML = '<option value="">Carregando...</option>';
+
+  try {
+    veiculosCalculadoraCache = await Veiculos.listarAtivos(usuarioAtual.id);
+    select.innerHTML = '';
+
+    if (!veiculosCalculadoraCache.length) {
+      select.innerHTML = '<option value="">Nenhum veículo cadastrado</option>';
+      return;
+    }
+
+    veiculosCalculadoraCache.forEach((v) => {
+      const opt = document.createElement('option');
+      opt.value = v.id;
+      opt.textContent = `${iconeTipoVeiculo(v.tipo)} ${v.nome_modelo}`;
+      select.appendChild(opt);
+    });
+
+    ajustarSeletorVeiculoUnico('calc-select-veiculo', 'calc-texto-veiculo-unico', 'calc-label-veiculo', veiculosCalculadoraCache);
+  } catch (err) {
+    console.error(err);
+    select.innerHTML = '<option value="">Erro ao carregar veículos</option>';
+  }
+}
+
+function calcularViabilidade() {
+  esconderErro('calc-erro');
+
+  const veiculoId = document.getElementById('calc-select-veiculo').value;
+  const veiculo = veiculosCalculadoraCache.find((v) => v.id === veiculoId);
+  const km = parseFloat(document.getElementById('calc-input-km').value);
+  const valorCorrida = parseFloat(document.getElementById('calc-input-valor').value);
+
+  if (!veiculo) {
+    mostrarErro('calc-erro', 'Cadastre um veículo antes de usar a calculadora.');
+    return;
+  }
+  if (!km || km <= 0) {
+    mostrarErro('calc-erro', 'Informe o KM total do trajeto.');
+    return;
+  }
+  if (!valorCorrida || valorCorrida <= 0) {
+    mostrarErro('calc-erro', 'Informe o valor da corrida.');
+    return;
+  }
+
+  const precoCombustivel = perfilAtual?.preco_combustivel_atual || 0;
+  const custoCombustivel = (km / veiculo.autonomia_kml) * precoCombustivel;
+  const custoManutencao = km * Number(veiculo.taxa_manutencao_km);
+  const custoDepreciacao = km * Number(veiculo.taxa_depreciacao_km);
+  const custoTotal = custoCombustivel + custoManutencao + custoDepreciacao;
+
+  const lucroLiquido = valorCorrida - custoTotal;
+  const lucroPorKm = lucroLiquido / km;
+  const custoPorKm = custoTotal / km;
+
+  let veredito, corFundo, corTexto, emoji;
+  if (lucroLiquido <= 0) {
+    veredito = 'Prejuízo'; emoji = '🔴'; corFundo = 'rgba(255,82,82,0.15)'; corTexto = 'var(--lsr-red)';
+  } else if (lucroPorKm <= custoPorKm) {
+    veredito = 'Cobre o custo, mas fica apertado'; emoji = '🟡'; corFundo = 'rgba(255,183,77,0.15)'; corTexto = '#ffb74d';
+  } else {
+    veredito = 'Vale a pena'; emoji = '🟢'; corFundo = 'rgba(0,230,118,0.15)'; corTexto = 'var(--lsr-green)';
+  }
+
+  const badge = document.getElementById('calc-veredito-badge');
+  badge.style.backgroundColor = corFundo;
+  badge.style.color = corTexto;
+  badge.innerHTML = `<span>${emoji}</span><span>${veredito}</span>`;
+
+  const lucroEl = document.getElementById('calc-lucro-liquido');
+  lucroEl.textContent = formatarMoeda(lucroLiquido);
+  lucroEl.style.color = lucroLiquido >= 0 ? 'var(--lsr-green)' : 'var(--lsr-red)';
+
+  document.getElementById('calc-lucro-por-km').textContent = `${formatarMoeda(lucroPorKm)} por km rodado`;
+  document.getElementById('calc-custo-combustivel').textContent = formatarMoeda(custoCombustivel);
+  document.getElementById('calc-custo-manutencao').textContent = formatarMoeda(custoManutencao);
+  document.getElementById('calc-custo-depreciacao').textContent = formatarMoeda(custoDepreciacao);
+  document.getElementById('calc-custo-total').textContent = formatarMoeda(custoTotal);
+
+  document.getElementById('calc-resultado').classList.remove('hidden');
+  document.getElementById('btn-calcular-viabilidade').classList.add('hidden');
+  document.getElementById('btn-calcular-outra').classList.remove('hidden');
 }
 
 // ------------------------------------------------------------
@@ -2536,6 +2655,16 @@ document.addEventListener('DOMContentLoaded', () => {
       btn.textContent = 'Salvar bloco';
     }
   });
+
+  document.getElementById('btn-ir-calculadora').addEventListener('click', () => {
+    mostrarTela('tela-calculadora');
+    prepararCalculadora();
+  });
+  document.getElementById('btn-voltar-calculadora').addEventListener('click', () => {
+    mostrarTela('tela-config-motorista');
+  });
+  document.getElementById('btn-calcular-viabilidade').addEventListener('click', calcularViabilidade);
+  document.getElementById('btn-calcular-outra').addEventListener('click', prepararCalculadora);
 
   document.getElementById('btn-ir-ajuda-motorista').addEventListener('click', () => {
     mostrarTela('tela-ajuda-motorista');
