@@ -55,6 +55,31 @@ function capturarTelaInicialDaURL() {
 capturarTelaInicialDaURL();
 
 /**
+ * Quando só existe 1 veículo cadastrado, não faz sentido mostrar um
+ * <select> — não tem escolha nenhuma pra fazer ali, só faz a tela
+ * parecer que tem uma decisão pendente. Esconde o campo e mostra um
+ * texto simples avisando qual veículo já está selecionado (o valor
+ * continua indo certinho no formulário, só a aparência muda).
+ */
+function ajustarSeletorVeiculoUnico(selectId, textoId, labelId, veiculos) {
+  const select = document.getElementById(selectId);
+  const texto = document.getElementById(textoId);
+  const label = labelId ? document.getElementById(labelId) : null;
+
+  if (veiculos.length === 1) {
+    const v = veiculos[0];
+    select.classList.add('hidden');
+    if (label) label.classList.add('hidden');
+    texto.textContent = `${iconeTipoVeiculo(v.tipo)} ${v.nome_modelo}`;
+    texto.classList.remove('hidden');
+  } else {
+    select.classList.remove('hidden');
+    if (label) label.classList.remove('hidden');
+    texto.classList.add('hidden');
+  }
+}
+
+/**
  * Neutraliza caracteres HTML perigosos antes de inserir texto vindo do
  * usuário (nome, WhatsApp, descrição de despesa, nome de veículo etc.)
  * em qualquer innerHTML. Sem isso, alguém poderia se cadastrar com um
@@ -700,6 +725,7 @@ async function abrirModalNovaDespesa(despesaExistente, veiculoDaDespesa) {
     });
 
     if (despesaExistente) select.value = despesaExistente.veiculo_id;
+    ajustarSeletorVeiculoUnico('select-veiculo-despesa', 'texto-veiculo-unico-despesa', 'label-campo-veiculo-despesa', veiculosParaListar);
   } catch (err) {
     select.innerHTML = '<option value="">Erro ao carregar veículos</option>';
   }
@@ -1068,6 +1094,7 @@ async function abrirModalIniciarTurno() {
       opt.textContent = `${iconeTipoVeiculo(v.tipo)} ${v.nome_modelo}`;
       select.appendChild(opt);
     });
+    ajustarSeletorVeiculoUnico('select-veiculo-turno', 'texto-veiculo-unico-turno', 'label-campo-veiculo-turno', veiculosAtivosCache);
   }
 
   document.getElementById('modal-iniciar-turno').classList.remove('hidden');
