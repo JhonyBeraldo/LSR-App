@@ -243,20 +243,20 @@ const Admin = {
     return data || [];
   },
 
-  async criarPlano({ nome, diasDuracao, valor, incluiCalculadora }) {
+  async criarPlano({ nome, diasDuracao, valor, incluiCalculadora, visivelNoApp }) {
     const { data, error } = await supabaseClient
       .from('planos_precos')
-      .insert({ nome, dias_duracao: diasDuracao, valor, inclui_calculadora: !!incluiCalculadora })
+      .insert({ nome, dias_duracao: diasDuracao, valor, inclui_calculadora: !!incluiCalculadora, visivel_no_app: visivelNoApp !== false })
       .select()
       .single();
     if (error) throw error;
     return data;
   },
 
-  async atualizarPlano(id, { nome, diasDuracao, valor, incluiCalculadora }) {
+  async atualizarPlano(id, { nome, diasDuracao, valor, incluiCalculadora, visivelNoApp }) {
     const { data, error } = await supabaseClient
       .from('planos_precos')
-      .update({ nome, dias_duracao: diasDuracao, valor, inclui_calculadora: !!incluiCalculadora })
+      .update({ nome, dias_duracao: diasDuracao, valor, inclui_calculadora: !!incluiCalculadora, visivel_no_app: visivelNoApp !== false })
       .eq('id', id)
       .select()
       .single();

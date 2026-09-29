@@ -1510,7 +1510,7 @@ async function carregarConfigPlanos() {
       card.innerHTML = `
         <div>
           <p class="text-white text-sm font-semibold">${escapeHtml(p.nome)}</p>
-          <p class="text-xs" style="color:var(--lsr-text-muted)">${p.dias_duracao} dias · ${p.valor > 0 ? formatarMoeda(p.valor) : 'Grátis'}${p.inclui_calculadora ? ' · 🧮 Com calculadora' : ''}${!p.is_ativo ? ' · Inativo' : ''}</p>
+          <p class="text-xs" style="color:var(--lsr-text-muted)">${p.dias_duracao} dias · ${p.valor > 0 ? formatarMoeda(p.valor) : 'Grátis'}${p.inclui_calculadora ? ' · 🧮 Com calculadora' : ''}${p.visivel_no_app === false ? ' · 🙈 Oculto do app' : ''}${!p.is_ativo ? ' · Inativo' : ''}</p>
         </div>
         <span class="text-lg" style="color:var(--lsr-text-muted)">›</span>
       `;
@@ -1555,7 +1555,7 @@ async function carregarMeuPlano() {
 
   try {
     const planos = await Admin.listarPlanos();
-    const outrosPlanos = planos.filter((p) => p.id !== perfilAtual?.plano_id);
+    const outrosPlanos = planos.filter((p) => p.id !== perfilAtual?.plano_id && p.visivel_no_app !== false);
     container.innerHTML = '';
 
     if (!outrosPlanos.length) {
@@ -1832,6 +1832,7 @@ function abrirModalCadastrarPlano(planoExistente) {
   document.getElementById('plano-cadastro-dias').value = planoExistente ? planoExistente.dias_duracao : '';
   document.getElementById('plano-cadastro-valor').value = planoExistente ? planoExistente.valor : '';
   document.getElementById('plano-cadastro-calculadora').checked = planoExistente ? !!planoExistente.inclui_calculadora : false;
+  document.getElementById('plano-cadastro-visivel').checked = planoExistente ? (planoExistente.visivel_no_app !== false) : true;
 
   const btnToggle = document.getElementById('btn-alternar-ativo-plano');
   if (planoExistente) {
@@ -2778,6 +2779,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const dias = parseInt(document.getElementById('plano-cadastro-dias').value, 10);
     const valor = parseFloat(document.getElementById('plano-cadastro-valor').value);
     const incluiCalculadora = document.getElementById('plano-cadastro-calculadora').checked;
+    const visivelNoApp = document.getElementById('plano-cadastro-visivel').checked;
 
     if (!nome) {
       mostrarErro('erro-cadastrar-plano', 'Digite um nome pro plano.');
@@ -2797,9 +2799,9 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.textContent = 'Salvando...';
     try {
       if (planoEmEdicaoId) {
-        await Admin.atualizarPlano(planoEmEdicaoId, { nome, diasDuracao: dias, valor, incluiCalculadora });
+        await Admin.atualizarPlano(planoEmEdicaoId, { nome, diasDuracao: dias, valor, incluiCalculadora, visivelNoApp });
       } else {
-        await Admin.criarPlano({ nome, diasDuracao: dias, valor, incluiCalculadora });
+        await Admin.criarPlano({ nome, diasDuracao: dias, valor, incluiCalculadora, visivelNoApp });
       }
       fecharModalCadastrarPlano();
       await carregarConfigPlanos();
