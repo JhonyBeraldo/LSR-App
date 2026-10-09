@@ -265,6 +265,7 @@ async function verificarAcessoEDirecionar(usuario) {
 
     document.getElementById('home-email').textContent = 'Bem-vindo, ' + (perfil.nome || 'Motorista');
     document.getElementById('calc-lock-badge').classList.toggle('hidden', !!perfil.calculadora_habilitada);
+    document.getElementById('btn-atalho-calculadora').classList.toggle('hidden', !perfil.calculadora_habilitada);
     mostrarTela('tela-home');
     await carregarEstadoHome();
 
@@ -1592,14 +1593,26 @@ async function carregarMeuPlano() {
 // Calculadora de Viabilidade ("Vale a corrida?")
 // ------------------------------------------------------------
 let veiculosCalculadoraCache = [];
+let calculadoraOrigem = 'tela-config-motorista'; // pra onde o "voltar" leva (home ou configurações)
+const CALC_ULTIMO_VEICULO_KEY = 'lsr_calc_ultimo_veiculo';
+
+/**
+ * Lê números digitados do jeito brasileiro: "12,5", "R$ 15,50", "1.234,50".
+ * Devolve NaN se não houver número válido.
+ */
+function lerNumeroBR(texto) {
+  let t = String(texto || '').replace(/[^\d.,]/g, '');
+  if (!t) return NaN;
+  if (t.includes(',')) t = t.replace(/\./g, '').replace(',', '.');
+  return parseFloat(t);
+}
 
 async function prepararCalculadora() {
   esconderErro('calc-erro');
   document.getElementById('calc-input-km').value = '';
   document.getElementById('calc-input-valor').value = '';
   document.getElementById('calc-resultado').classList.add('hidden');
-  document.getElementById('btn-calcular-outra').classList.add('hidden');
-  document.getElementById('btn-calcular-viabilidade').classList.remove('hidden');
+  document.getElementById('btn-calcular-viabilidade').textContent = 'Calcular';
   document.getElementById('calc-select-veiculo-wrap').classList.remove('hidden');
 
   const select = document.getElementById('calc-select-veiculo');
@@ -1621,6 +1634,12 @@ async function prepararCalculadora() {
       select.appendChild(opt);
     });
 
+    // Com mais de um veículo, já vem selecionado o último que a pessoa usou
+    try {
+      const ultimo = localStorage.getItem(CALC_ULTIMO_VEICULO_KEY);
+      if (ultimo && veiculosCalculadoraCache.some((v) => v.id === ultimo)) select.value = ultimo;
+    } catch (e) { /* sem localStorage — segue com o primeiro da lista */ }
+
     ajustarSeletorVeiculoUnico('calc-select-veiculo', 'calc-texto-veiculo-unico', 'calc-label-veiculo', veiculosCalculadoraCache);
   } catch (err) {
     console.error(err);
@@ -1630,11 +1649,13 @@ async function prepararCalculadora() {
 
 function calcularViabilidade() {
   esconderErro('calc-erro');
+  // Some o resultado anterior: se faltar algo, não fica um veredito velho na tela
+  document.getElementById('calc-resultado').classList.add('hidden');
 
   const veiculoId = document.getElementById('calc-select-veiculo').value;
   const veiculo = veiculosCalculadoraCache.find((v) => v.id === veiculoId);
-  const km = parseFloat(document.getElementById('calc-input-km').value);
-  const valorCorrida = parseFloat(document.getElementById('calc-input-valor').value);
+  const km = lerNumeroBR(document.getElementById('calc-input-km').value);
+  const valorCorrida = lerNumeroBR(document.getElementById('calc-input-valor').value);
 
   if (!veiculo) {
     mostrarErro('calc-erro', 'Cadastre um veículo antes de usar a calculadora.');
@@ -1684,8 +1705,13 @@ function calcularViabilidade() {
   document.getElementById('calc-custo-total').textContent = formatarMoeda(custoTotal);
 
   document.getElementById('calc-resultado').classList.remove('hidden');
-  document.getElementById('btn-calcular-viabilidade').classList.add('hidden');
-  document.getElementById('btn-calcular-outra').classList.remove('hidden');
+  // Os campos continuam preenchidos: é só editar o KM e/ou o valor e tocar em "Recalcular"
+  document.getElementById('btn-calcular-viabilidade').textContent = 'Recalcular';
+
+  try { localStorage.setItem(CALC_ULTIMO_VEICULO_KEY, veiculo.id); } catch (e) {}
+
+  // Fecha o teclado pra o resultado aparecer inteiro na tela
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
 }
 
 // ------------------------------------------------------------
@@ -2726,10 +2752,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  function abrirCalculadora(origem) {
+    calculadoraOrigem = origem;
+    mostrarTela('tela-calculadora');
+    prepararCalculadora();
+    // Foco no KM direto no toque (síncrono) pra o teclado numérico já subir sozinho
+    document.getElementById('calc-input-km').focus();
+  }
+
+  document.getElementById('btn-atalho-calculadora').addEventListener('click', () => abrirCalculadora('tela-home'));
+
   document.getElementById('btn-ir-calculadora').addEventListener('click', () => {
     if (perfilAtual?.calculadora_habilitada) {
-      mostrarTela('tela-calculadora');
-      prepararCalculadora();
+      abrirCalculadora('tela-config-motorista');
     } else {
       document.getElementById('modal-calculadora-upsell').classList.remove('hidden');
     }
@@ -2742,10 +2777,16 @@ document.addEventListener('DOMContentLoaded', () => {
     abrirWhatsAppSuporte('Olá! Vi a Calculadora de Viabilidade no app e gostaria de saber como liberar esse recurso.');
   });
   document.getElementById('btn-voltar-calculadora').addEventListener('click', () => {
-    mostrarTela('tela-config-motorista');
+    mostrarTela(calculadoraOrigem);
   });
   document.getElementById('btn-calcular-viabilidade').addEventListener('click', calcularViabilidade);
-  document.getElementById('btn-calcular-outra').addEventListener('click', prepararCalculadora);
+  // Teclado: "próximo" no KM pula pro valor; "ok" no valor calcula
+  document.getElementById('calc-input-km').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); document.getElementById('calc-input-valor').focus(); }
+  });
+  document.getElementById('calc-input-valor').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); calcularViabilidade(); }
+  });
 
   document.getElementById('btn-ir-meu-plano').addEventListener('click', () => {
     mostrarTela('tela-meu-plano');
